@@ -19,7 +19,6 @@ def answer_question(
             "sources": [],
         }
 
-    # Retrieve relevant course material
     results = search_similar_chunks(
         course_id=course_id,
         query=question,
@@ -35,8 +34,6 @@ def answer_question(
             "sources": [],
         }
 
-    # Build the course context
-    # Retrieved documents are treated as DATA, not instructions.
     context_parts = []
 
     for index, result in enumerate(results, start=1):
@@ -53,19 +50,16 @@ CONTENT:
 
     context = "\n\n".join(context_parts)
 
-    # Build protected RAG prompt
     prompt = build_rag_prompt(
         question=question,
         context=context,
     )
 
-    # Generate answer using Ollama
     answer = generate_text(
         prompt=prompt,
         system=SYSTEM_PROMPT,
     )
 
-    # Return sources for the frontend
     sources = [
         {
             "chunk_id": result["chunk_id"],

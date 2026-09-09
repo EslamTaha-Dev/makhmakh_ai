@@ -9,19 +9,16 @@ def generate_lesson(
     concept_name: str,
     concept_description: str,
 ):
-    # 1. Generate educational script
     script = generate_lesson_script(
         concept_name=concept_name,
         concept_description=concept_description,
     )
 
-    # 2. Generate slides
     slides = create_slides(
         script=script,
         lesson_id=lesson_id,
     )
 
-    # 3. Generate voice
     text_for_audio = " ".join(
         [
             script["introduction"],

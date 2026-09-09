@@ -1,6 +1,4 @@
 from app.ai.ollama_client import generate_json
-
-
 SYSTEM_PROMPT = """
 You are an educational concept extraction system.
 
@@ -17,7 +15,6 @@ Rules:
 
 
 def extract_concepts(text: str) -> dict:
-    # Prevent very large chunks from making the local LLM too slow.
     text = text.strip()[:6000]
 
     if not text:
@@ -56,7 +53,6 @@ TEXT:
         system=SYSTEM_PROMPT,
     )
 
-    # Protect the pipeline from malformed/missing fields.
     if not isinstance(result, dict):
         return {
             "concepts": [],

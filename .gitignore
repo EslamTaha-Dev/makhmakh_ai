@@ -40,3 +40,5 @@ Thumbs.db
 
 # Embedded pgvector repository
 pgvector/
+# Generated AI media
+generated/

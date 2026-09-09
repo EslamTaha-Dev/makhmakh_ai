@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+import soundfile as sf
 
 VIDEO_DIR = Path("generated/videos")
 
@@ -13,17 +14,18 @@ def render_video(
     VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 
     output_path = VIDEO_DIR / f"{lesson_id}.mp4"
-
     concat_file = VIDEO_DIR / f"{lesson_id}_slides.txt"
+
+    audio_info = sf.info(audio_path)
+    audio_duration = audio_info.duration
+
+    slide_duration = audio_duration / len(slide_paths)
 
     with open(concat_file, "w", encoding="utf-8") as file:
         for slide in slide_paths:
-            file.write(
-                f"file '{Path(slide).resolve()}'\n"
-            )
-            file.write("duration 5\n")
+            file.write(f"file '{Path(slide).resolve()}'\n")
+            file.write(f"duration {slide_duration}\n")
 
-        # FFmpeg requires the last image to appear again
         if slide_paths:
             file.write(
                 f"file '{Path(slide_paths[-1]).resolve()}'\n"
@@ -50,9 +52,6 @@ def render_video(
         str(output_path),
     ]
 
-    subprocess.run(
-        command,
-        check=True,
-    )
+    subprocess.run(command, check=True)
 
     return str(output_path)

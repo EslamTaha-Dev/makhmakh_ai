@@ -15,3 +15,8 @@ processing_queue = Queue(
     "material_processing",
     connection=redis_connection,
 )
+
+video_queue = Queue(
+    "video_generation",
+    connection=redis_connection,
+)

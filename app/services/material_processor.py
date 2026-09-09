@@ -31,9 +31,6 @@ def process_material(
     job = None
 
     try:
-        # -----------------------------------------
-        # 1. Get material
-        # -----------------------------------------
         material = db.scalar(
             select(Material).where(
                 Material.id == material_id
@@ -44,10 +41,6 @@ def process_material(
             raise ValueError(
                 "Material not found"
             )
-
-        # -----------------------------------------
-        # 2. Get or create processing job
-        # -----------------------------------------
         job = db.scalar(
             select(ProcessingJob)
             .where(
@@ -72,10 +65,6 @@ def process_material(
         elif job.status != "pending":
             job.status = "pending"
             job.error_message = None
-
-        # -----------------------------------------
-        # 3. Mark processing
-        # -----------------------------------------
         material.processing_status = "processing"
         material.error_message = None
 
@@ -87,10 +76,6 @@ def process_material(
         job.error_message = None
 
         db.commit()
-
-        # -----------------------------------------
-        # 4. Check file
-        # -----------------------------------------
         path = Path(
             material.storage_url
         )
@@ -101,10 +86,6 @@ def process_material(
             )
 
         extension = path.suffix.lower()
-
-        # -----------------------------------------
-        # 5. Extract text
-        # -----------------------------------------
         if extension in AUDIO_EXTENSIONS:
             text = transcribe_audio(
                 str(path)
@@ -124,19 +105,12 @@ def process_material(
                 "No text could be extracted from material"
             )
 
-        # -----------------------------------------
-        # 6. Chunk text
-        # -----------------------------------------
         chunks = chunk_text(text)
 
         if not chunks:
             raise ValueError(
                 "No chunks were generated"
             )
-
-        # -----------------------------------------
-        # 7. Save content chunks
-        # -----------------------------------------
         existing_chunks = db.scalars(
             select(ContentChunk).where(
                 ContentChunk.material_id
@@ -175,19 +149,11 @@ def process_material(
             saved_chunks += 1
 
         db.flush()
-
-        # IMPORTANT:
-        # Commit chunks separately so they are not
-        # removed if Ollama fails later.
         db.commit()
 
         print(
             f"Content chunks saved: {saved_chunks}"
         )
-
-        # -----------------------------------------
-        # 8. Extract concepts
-        # -----------------------------------------
         result = extract_course_concepts(
             chunks
         )
@@ -220,9 +186,6 @@ def process_material(
         ):
             prerequisites_data = []
 
-        # -----------------------------------------
-        # 9. Build concept graph
-        # -----------------------------------------
         ordered_names, safe_edges = (
             topological_sort(
                 concepts_data,
@@ -230,9 +193,6 @@ def process_material(
             )
         )
 
-        # -----------------------------------------
-        # 10. Get existing concepts
-        # -----------------------------------------
         existing_concepts = db.scalars(
             select(Concept).where(
                 Concept.course_id
@@ -245,9 +205,7 @@ def process_material(
             for concept in existing_concepts
         }
 
-        # -----------------------------------------
-        # 11. Create / update concepts
-        # -----------------------------------------
+        
         for index, name in enumerate(
             ordered_names
         ):
@@ -302,9 +260,6 @@ def process_material(
 
         db.flush()
 
-        # -----------------------------------------
-        # 12. Create prerequisites
-        # -----------------------------------------
         for edge in safe_edges:
             concept_name = edge.get(
                 "concept",
@@ -366,10 +321,6 @@ def process_material(
                         ),
                     )
                 )
-
-        # -----------------------------------------
-        # 13. Mark completed
-        # -----------------------------------------
         material.processing_status = (
             "completed"
         )
@@ -385,9 +336,6 @@ def process_material(
         db.commit()
 
     except Exception as exc:
-        # -----------------------------------------
-        # 14. Handle failure
-        # -----------------------------------------
         db.rollback()
 
         if material is not None:
@@ -412,7 +360,4 @@ def process_material(
         raise
 
     finally:
-        # -----------------------------------------
-        # 15. Close DB
-        # -----------------------------------------
         db.close()

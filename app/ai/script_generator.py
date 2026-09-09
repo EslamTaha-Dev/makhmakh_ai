@@ -43,11 +43,19 @@ Rules:
 
     result = generate_text(prompt).strip()
 
-    # Remove Markdown code fences if Ollama adds them
-    result = re.sub(r"^```(?:json)?\s*", "", result, flags=re.IGNORECASE)
-    result = re.sub(r"\s*```$", "", result).strip()
+    result = re.sub(
+        r"^```(?:json)?\s*",
+        "",
+        result,
+        flags=re.IGNORECASE,
+    )
 
-    # Extract the JSON object if the model added extra text
+    result = re.sub(
+        r"\s*```$",
+        "",
+        result,
+    ).strip()
+
     start = result.find("{")
     end = result.rfind("}")
 
@@ -58,15 +66,43 @@ Rules:
 
     result = result[start:end + 1]
 
-    # Remove invalid control characters inside the response
     result = "".join(
         char for char in result
         if char in "\n\r\t" or ord(char) >= 32
     )
 
     try:
-        return json.loads(result)
+        data = json.loads(result)
+
     except json.JSONDecodeError as e:
         raise ValueError(
-            f"Invalid JSON returned by Ollama: {e}"
+            f"Invalid JSON returned by Ollama: {e}\n"
+            f"Raw response:\n{result}"
         ) from e
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            "Lesson script must be a JSON object."
+        )
+
+    required_keys = {
+        "title",
+        "introduction",
+        "sections",
+        "summary",
+    }
+
+    missing_keys = required_keys - data.keys()
+
+    if missing_keys:
+        raise ValueError(
+            f"Lesson script is missing required keys: "
+            f"{sorted(missing_keys)}"
+        )
+
+    if not isinstance(data["sections"], list):
+        raise ValueError(
+            "Lesson script 'sections' must be a list."
+        )
+
+    return data

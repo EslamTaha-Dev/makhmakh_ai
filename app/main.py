@@ -14,6 +14,7 @@ from app.api.routes.map import router as map_router
 from app.api.routes.concepts import router as concepts_router
 from app.api.routes.progress import router as progress_router
 from app.api.routes.chat import router as chat_router
+from app.api.routes.lessons import router as lessons_router
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
@@ -52,6 +53,10 @@ app.include_router(health_router)
 
 app.include_router(
     auth_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    lessons_router,
     prefix="/api/v1",
 )
 

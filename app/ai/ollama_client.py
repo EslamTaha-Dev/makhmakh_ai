@@ -8,7 +8,6 @@ from app.core.config import get_settings
 class OllamaError(Exception):
     pass
 
-
 def generate_text(
     prompt: str,
     system: str | None = None,
@@ -33,7 +32,6 @@ def generate_text(
             timeout=60.0,
             trust_env=False,
         )
-
         response.raise_for_status()
 
     except httpx.HTTPError as exc:
@@ -62,7 +60,6 @@ def generate_text(
 def _extract_json(text: str):
     cleaned = text.strip()
 
-    # Remove Markdown code fences
     if cleaned.startswith("```"):
         lines = cleaned.splitlines()
 
@@ -73,15 +70,11 @@ def _extract_json(text: str):
             lines = lines[:-1]
 
         cleaned = "\n".join(lines).strip()
-
-    # First try the complete response
     try:
         return json.loads(cleaned)
 
     except json.JSONDecodeError:
         pass
-
-    # Try to extract a JSON object
     object_start = cleaned.find("{")
     object_end = cleaned.rfind("}")
 
@@ -94,7 +87,6 @@ def _extract_json(text: str):
         except json.JSONDecodeError:
             pass
 
-    # Try to extract a JSON array
     array_start = cleaned.find("[")
     array_end = cleaned.rfind("]")
 

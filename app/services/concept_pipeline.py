@@ -120,7 +120,7 @@ def extract_course_concepts(
             if not isinstance(
                 relation,
                 dict,
-            ):
+          ):
                 continue
 
             concept = _safe_string(

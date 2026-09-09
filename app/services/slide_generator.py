@@ -46,8 +46,6 @@ def create_slides(script: dict, lesson_id: str) -> list[str]:
     body_font = _get_font(30)
 
     slide_paths = []
-
-    # Title slide
     image = Image.new("RGB", (1280, 720), "white")
     draw = ImageDraw.Draw(image)
 
@@ -69,7 +67,6 @@ def create_slides(script: dict, lesson_id: str) -> list[str]:
     image.save(path)
     slide_paths.append(str(path))
 
-    # Content slides
     for index, section in enumerate(script["sections"], start=2):
         image = Image.new("RGB", (1280, 720), "white")
         draw = ImageDraw.Draw(image)
@@ -98,8 +95,6 @@ def create_slides(script: dict, lesson_id: str) -> list[str]:
         image.save(path)
 
         slide_paths.append(str(path))
-
-    # Summary slide
     image = Image.new("RGB", (1280, 720), "white")
     draw = ImageDraw.Draw(image)
 
