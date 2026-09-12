@@ -10,6 +10,10 @@ from app.models.content_chunk import ContentChunk
 from app.models.refresh_token import RefreshToken
 from app.models.security_event import SecurityEvent
 from app.models.role import Role, UserRole
+from app.models.subscription import Subscription
+from app.models.payment import Payment
+from app.models.invoice import Invoice
+from app.models.payment_event import PaymentEvent
 
 __all__ = [
     "User",
@@ -26,5 +30,9 @@ __all__ = [
     "RefreshToken",
     "SecurityEvent",
     "Role",
-"UserRole",
+    "UserRole",
+    "Subscription",
+    "Payment",
+    "Invoice",
+    "PaymentEvent",
 ]

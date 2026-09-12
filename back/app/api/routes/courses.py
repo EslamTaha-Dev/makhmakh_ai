@@ -47,6 +47,7 @@ def create_course(
     course = Course(
         name=data.name.strip(),
         description=data.description,
+        price=data.price,
         created_by=current_user.id,
     )
 

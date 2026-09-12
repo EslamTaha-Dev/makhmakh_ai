@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.dependencies import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.concept import Concept
+from app.models.course import Course
 from app.models.lesson import Lesson
 from app.models.user import User
 from app.schemas.lesson import LessonResponse
@@ -25,6 +26,11 @@ CONTENT_MANAGEMENT_ROLES = (
     "admin",
     "super_admin",
 )
+
+ADMIN_ROLES = {
+    "admin",
+    "super_admin",
+}
 
 
 @router.post(
@@ -49,6 +55,27 @@ def create_lesson(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Concept not found",
+        )
+
+    course = db.scalar(
+        select(Course).where(
+            Course.id == concept.course_id
+        )
+    )
+
+    if course is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found",
+        )
+
+    if (
+        current_user.role not in ADMIN_ROLES
+        and course.created_by != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create lessons for courses you created",
         )
 
     lesson = Lesson(

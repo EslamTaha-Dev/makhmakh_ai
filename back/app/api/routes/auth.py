@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
-from sqlalchemy import update
-from app.models.refresh_token import RefreshToken
 
-
+from app.api.dependencies import get_current_user
 from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
@@ -16,7 +14,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-from app.api.dependencies import get_current_user
+from app.models.refresh_token import RefreshToken
 from app.models.role import Role, UserRole
 from app.models.user import User
 from app.schemas.auth import (
@@ -61,18 +59,6 @@ def register(
             detail="Email already registered",
         )
 
-    user = User(
-        name=data.name.strip(),
-        email=data.email.lower(),
-        password_hash=hash_password(data.password),
-        role="student",
-        failed_login_attempts=0,
-    )
-
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
     student_role = db.scalar(
         select(Role).where(
             Role.name == "student"
@@ -84,6 +70,17 @@ def register(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Default student role is not configured",
         )
+
+    user = User(
+        name=data.name.strip(),
+        email=data.email.lower(),
+        password_hash=hash_password(data.password),
+        role="student",
+        failed_login_attempts=0,
+    )
+
+    db.add(user)
+    db.flush()
 
     user_role = UserRole(
         user_id=user.id,
@@ -99,6 +96,7 @@ def register(
     )
 
     db.commit()
+    db.refresh(user)
 
     return user
 
@@ -124,9 +122,7 @@ def login(
             db=db,
             event_type="login_failed",
             request=request,
-            details={
-                "reason": "invalid_credentials",
-            },
+            details={"reason": "invalid_credentials"},
         )
 
         db.commit()
@@ -148,7 +144,7 @@ def login(
                 user_id=user.id,
                 request=request,
                 details={
-                    "reason": "account_locked",
+                    "reason": "account_locked"
                 },
             )
 
@@ -181,7 +177,10 @@ def login(
             },
         )
 
-        if user.failed_login_attempts >= MAX_FAILED_LOGIN_ATTEMPTS:
+        if (
+            user.failed_login_attempts
+            >= MAX_FAILED_LOGIN_ATTEMPTS
+        ):
             user.locked_until = (
                 now
                 + timedelta(
@@ -296,7 +295,7 @@ def refresh_token(
             user_id=stored_token.user_id,
             request=request,
             details={
-                "reason": "revoked_refresh_token_reused",
+                "reason": "revoked_refresh_token_reused"
             },
         )
 
@@ -392,11 +391,11 @@ def refresh_token(
     response_model=UserResponse,
 )
 def get_me(
-    current_user: User = Depends(
-        get_current_user
-    ),
+    current_user: User = Depends(get_current_user),
 ):
     return current_user
+
+
 @router.post("/logout")
 def logout(
     request: Request,
@@ -409,7 +408,9 @@ def logout(
             RefreshToken.user_id == current_user.id,
             RefreshToken.revoked.is_(False),
         )
-        .values(revoked=True)
+        .values(
+            revoked=True
+        )
     )
 
     record_security_event(
