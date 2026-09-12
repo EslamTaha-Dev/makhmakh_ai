@@ -1,34 +1,23 @@
 import uuid
 from datetime import datetime
-from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class CourseCreate(BaseModel):
-    name: str = Field(
-        min_length=2,
-        max_length=200,
-    )
-
-    description: str | None = None
-
-    price: Decimal = Field(
-        default=Decimal("0.00"),
-        ge=0,
-        max_digits=12,
-        decimal_places=2,
-    )
+from pydantic import BaseModel, ConfigDict
 
 
-class CourseResponse(BaseModel):
+class ConceptResponse(BaseModel):
     id: uuid.UUID
+    course_id: uuid.UUID
     name: str
     description: str | None
-    price: Decimal
-    created_by: uuid.UUID
+    order_index: int
     created_at: datetime
 
-    model_config = ConfigDict(
-        from_attributes=True
-    )
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ConceptPrerequisiteResponse(BaseModel):
+    id: uuid.UUID
+    concept_id: uuid.UUID
+    prerequisite_concept_id: uuid.UUID
+
+    model_config = ConfigDict(from_attributes=True)
