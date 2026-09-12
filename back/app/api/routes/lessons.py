@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user, require_admin
+from app.api.dependencies import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.concept import Concept
 from app.models.lesson import Lesson
@@ -19,6 +19,14 @@ router = APIRouter(
 )
 
 
+CONTENT_MANAGEMENT_ROLES = (
+    "instructor",
+    "content_creator",
+    "admin",
+    "super_admin",
+)
+
+
 @router.post(
     "/concepts/{concept_id}",
     response_model=LessonResponse,
@@ -27,7 +35,9 @@ router = APIRouter(
 def create_lesson(
     concept_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(
+        require_roles(*CONTENT_MANAGEMENT_ROLES)
+    ),
 ):
     concept = db.scalar(
         select(Concept).where(
@@ -61,7 +71,7 @@ def create_lesson(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to queue lesson generation: {str(exc)}",
+            detail="Failed to queue lesson generation",
         ) from exc
 
     return lesson

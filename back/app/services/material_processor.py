@@ -1,6 +1,5 @@
-from app.ai.embeddings import embed_text
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -11,6 +10,7 @@ from app.models.material import Material
 from app.models.processing_job import ProcessingJob
 from app.services.chunker import chunk_text
 from app.services.concept_pipeline import extract_course_concepts
+from app.services.embedding_service import generate_missing_embeddings
 from app.services.extractor import extract_document
 from app.services.graph import topological_sort
 from app.services.transcription import transcribe_audio
@@ -22,9 +22,7 @@ AUDIO_EXTENSIONS = {
 }
 
 
-def process_material(
-    material_id: str,
-):
+def process_material(material_id: str):
     db = SessionLocal()
 
     material = None
@@ -38,14 +36,12 @@ def process_material(
         )
 
         if material is None:
-            raise ValueError(
-                "Material not found"
-            )
+            raise ValueError("Material not found")
+
         job = db.scalar(
             select(ProcessingJob)
             .where(
-                ProcessingJob.material_id
-                == material.id
+                ProcessingJob.material_id == material.id
             )
             .order_by(
                 ProcessingJob.created_at.desc()
@@ -65,20 +61,18 @@ def process_material(
         elif job.status != "pending":
             job.status = "pending"
             job.error_message = None
+
         material.processing_status = "processing"
         material.error_message = None
 
         job.status = "processing"
-        job.started_at = datetime.now(
-            timezone.utc
-        )
+        job.started_at = datetime.now(timezone.utc)
         job.completed_at = None
         job.error_message = None
 
         db.commit()
-        path = Path(
-            material.storage_url
-        )
+
+        path = Path(material.storage_url)
 
         if not path.exists():
             raise FileNotFoundError(
@@ -86,6 +80,7 @@ def process_material(
             )
 
         extension = path.suffix.lower()
+
         if extension in AUDIO_EXTENSIONS:
             text = transcribe_audio(
                 str(path)
@@ -111,10 +106,10 @@ def process_material(
             raise ValueError(
                 "No chunks were generated"
             )
+
         existing_chunks = db.scalars(
             select(ContentChunk).where(
-                ContentChunk.material_id
-                == material.id
+                ContentChunk.material_id == material.id
             )
         ).all()
 
@@ -154,6 +149,15 @@ def process_material(
         print(
             f"Content chunks saved: {saved_chunks}"
         )
+
+        generated_embeddings = (
+            generate_missing_embeddings()
+        )
+
+        print(
+            f"Embeddings generated: {generated_embeddings}"
+        )
+
         result = extract_course_concepts(
             chunks
         )
@@ -174,29 +178,20 @@ def process_material(
             [],
         )
 
-        if not isinstance(
-            concepts_data,
-            list,
-        ):
+        if not isinstance(concepts_data, list):
             concepts_data = []
 
-        if not isinstance(
-            prerequisites_data,
-            list,
-        ):
+        if not isinstance(prerequisites_data, list):
             prerequisites_data = []
 
-        ordered_names, safe_edges = (
-            topological_sort(
-                concepts_data,
-                prerequisites_data,
-            )
+        ordered_names, safe_edges = topological_sort(
+            concepts_data,
+            prerequisites_data,
         )
 
         existing_concepts = db.scalars(
             select(Concept).where(
-                Concept.course_id
-                == material.course_id
+                Concept.course_id == material.course_id
             )
         ).all()
 
@@ -205,16 +200,57 @@ def process_material(
             for concept in existing_concepts
         }
 
-        
+        ordered_name_set = {
+            name.lower()
+            for name in ordered_names
+            if isinstance(name, str)
+        }
+
+        remaining_names = []
+
+        for item in concepts_data:
+            if not isinstance(item, dict):
+                continue
+
+            name = item.get("name")
+
+            if not isinstance(name, str):
+                continue
+
+            name = name.strip()
+
+            if not name:
+                continue
+
+            if name.lower() not in ordered_name_set:
+                remaining_names.append(name)
+
+        final_ordered_names = (
+            ordered_names + remaining_names
+        )
+
         for index, name in enumerate(
-            ordered_names
+            final_ordered_names
         ):
+            if not isinstance(name, str):
+                continue
+
+            name = name.strip()
+
+            if not name:
+                continue
+
             data = next(
                 (
                     item
                     for item in concepts_data
                     if isinstance(item, dict)
-                    and item.get("name") == name
+                    and isinstance(
+                        item.get("name"),
+                        str,
+                    )
+                    and item.get("name").strip().lower()
+                    == name.lower()
                 ),
                 None,
             )
@@ -224,17 +260,22 @@ def process_material(
 
             key = name.lower()
 
-            concept = concept_by_name.get(
-                key
+            concept = concept_by_name.get(key)
+
+            description = data.get(
+                "description"
             )
+
+            if not isinstance(description, str):
+                description = None
+            else:
+                description = description.strip() or None
 
             if concept is None:
                 concept = Concept(
                     course_id=material.course_id,
-                    name=data["name"],
-                    description=data.get(
-                        "description"
-                    ),
+                    name=name,
+                    description=description,
                     order_index=index,
                 )
 
@@ -246,21 +287,15 @@ def process_material(
             else:
                 concept.order_index = index
 
-                description = data.get(
-                    "description"
-                )
-
-                if isinstance(
-                    description,
-                    str,
-                ) and description.strip():
-                    concept.description = (
-                        description.strip()
-                    )
+                if description:
+                    concept.description = description
 
         db.flush()
 
         for edge in safe_edges:
+            if not isinstance(edge, dict):
+                continue
+
             concept_name = edge.get(
                 "concept",
                 "",
@@ -271,16 +306,16 @@ def process_material(
                 "",
             )
 
-            if not isinstance(
-                concept_name,
-                str,
-            ):
+            if not isinstance(concept_name, str):
                 continue
 
-            if not isinstance(
-                prerequisite_name,
-                str,
-            ):
+            if not isinstance(prerequisite_name, str):
+                continue
+
+            concept_name = concept_name.strip()
+            prerequisite_name = prerequisite_name.strip()
+
+            if not concept_name or not prerequisite_name:
                 continue
 
             concept = concept_by_name.get(
@@ -291,24 +326,18 @@ def process_material(
                 prerequisite_name.lower()
             )
 
-            if (
-                not concept
-                or not prerequisite
-            ):
+            if concept is None or prerequisite is None:
                 continue
 
             if concept.id == prerequisite.id:
                 continue
 
             existing_relation = db.scalar(
-                select(ConceptPrerequisite)
-                .where(
+                select(ConceptPrerequisite).where(
                     ConceptPrerequisite.concept_id
-                    == concept.id
-                )
-                .where(
+                    == concept.id,
                     ConceptPrerequisite.prerequisite_concept_id
-                    == prerequisite.id
+                    == prerequisite.id,
                 )
             )
 
@@ -316,44 +345,34 @@ def process_material(
                 db.add(
                     ConceptPrerequisite(
                         concept_id=concept.id,
-                        prerequisite_concept_id=(
-                            prerequisite.id
-                        ),
+                        prerequisite_concept_id=prerequisite.id,
                     )
                 )
-        material.processing_status = (
-            "completed"
-        )
 
+        material.processing_status = "completed"
         material.error_message = None
 
         job.status = "completed"
-        job.completed_at = datetime.now(
-            timezone.utc
-        )
+        job.completed_at = datetime.now(timezone.utc)
         job.error_message = None
 
         db.commit()
+
+        print(
+            f"Material processing completed: {material.id}"
+        )
 
     except Exception as exc:
         db.rollback()
 
         if material is not None:
-            material.processing_status = (
-                "failed"
-            )
-            material.error_message = str(
-                exc
-            )
+            material.processing_status = "failed"
+            material.error_message = str(exc)
 
         if job is not None:
             job.status = "failed"
-            job.error_message = str(
-                exc
-            )
-            job.completed_at = datetime.now(
-                timezone.utc
-            )
+            job.error_message = str(exc)
+            job.completed_at = datetime.now(timezone.utc)
 
         db.commit()
 

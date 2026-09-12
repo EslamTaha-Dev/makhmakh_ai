@@ -10,18 +10,25 @@ def generate_missing_embeddings() -> int:
 
     try:
         chunks = db.scalars(
-            select(ContentChunk)
-            .where(ContentChunk.embedding.is_(None))
+            select(ContentChunk).where(
+                ContentChunk.embedding.is_(None)
+            )
         ).all()
 
         if not chunks:
             return 0
 
-        texts = [chunk.chunk_text for chunk in chunks]
+        texts = [
+            chunk.chunk_text
+            for chunk in chunks
+        ]
 
         embeddings = embed_texts(texts)
 
-        for chunk, embedding in zip(chunks, embeddings):
+        for chunk, embedding in zip(
+            chunks,
+            embeddings,
+        ):
             chunk.embedding = embedding
 
         db.commit()

@@ -4,6 +4,7 @@ from app.ai.embeddings import embed_text
 from app.db.session import SessionLocal
 from app.models.content_chunk import ContentChunk
 from app.models.material import Material
+from app.models.concept import Concept
 
 
 def search_similar_chunks(
@@ -14,6 +15,11 @@ def search_similar_chunks(
     db = SessionLocal()
 
     try:
+        query = query.strip()
+
+        if not query:
+            return []
+
         query_embedding = embed_text(query)
 
         distance = ContentChunk.embedding.cosine_distance(
@@ -38,16 +44,74 @@ def search_similar_chunks(
             .limit(top_k)
         ).all()
 
-        return [
-            {
-                "chunk_id": str(chunk.id),
-                "material_id": str(material.id),
-                "file_name": material.file_name,
-                "distance": float(chunk_distance),
-                "text": chunk.chunk_text,
+        concepts = db.scalars(
+            select(Concept)
+            .where(
+                Concept.course_id == course_id
+            )
+            .order_by(Concept.order_index)
+        ).all()
+
+        query_lower = query.lower()
+
+        matched_concepts = []
+
+        for concept in concepts:
+            name = (concept.name or "").strip()
+
+            if not name:
+                continue
+
+            if name.lower() in query_lower:
+                matched_concepts.append(concept)
+
+        output = []
+
+        for chunk, material, chunk_distance in results:
+            chunk_text = chunk.chunk_text or ""
+            chunk_lower = chunk_text.lower()
+
+            related_concepts = []
+
+            for concept in concepts:
+                name = (concept.name or "").strip()
+
+                if not name:
+                    continue
+
+                if name.lower() in chunk_lower:
+                    related_concepts.append(
+                        {
+                            "id": str(concept.id),
+                            "name": concept.name,
+                            "description": concept.description or "",
+                        }
+                    )
+
+            output.append(
+                {
+                    "chunk_id": str(chunk.id),
+                    "material_id": str(material.id),
+                    "file_name": material.file_name,
+                    "distance": float(chunk_distance),
+                    "text": chunk_text,
+                    "related_concepts": related_concepts,
+                }
+            )
+
+        if matched_concepts:
+            matched_ids = {
+                str(concept.id)
+                for concept in matched_concepts
             }
-            for chunk, material, chunk_distance in results
-        ]
+
+            for item in output:
+                for concept in item["related_concepts"]:
+                    if concept["id"] in matched_ids:
+                        item["graph_relevant"] = True
+                        break
+
+        return output
 
     finally:
         db.close()

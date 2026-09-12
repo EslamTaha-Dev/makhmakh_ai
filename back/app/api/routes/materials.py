@@ -12,7 +12,7 @@ from fastapi import (
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import require_admin
+from app.api.dependencies import get_current_user, require_roles
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.course import Course
@@ -20,8 +20,8 @@ from app.models.material import Material
 from app.models.processing_job import ProcessingJob
 from app.models.user import User
 from app.schemas.material import MaterialResponse
-from app.services.queue import processing_queue
 from app.services.material_processor import process_material
+from app.services.queue import processing_queue
 
 
 router = APIRouter(
@@ -29,7 +29,9 @@ router = APIRouter(
     tags=["Materials"],
 )
 
+
 settings = get_settings()
+
 
 ALLOWED_EXTENSIONS = {
     ".pdf",
@@ -44,6 +46,14 @@ ALLOWED_EXTENSIONS = {
 }
 
 
+CONTENT_MANAGEMENT_ROLES = (
+    "instructor",
+    "content_creator",
+    "admin",
+    "super_admin",
+)
+
+
 @router.post(
     "/{course_id}/materials",
     response_model=MaterialResponse,
@@ -53,7 +63,9 @@ def upload_material(
     course_id: uuid.UUID,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(
+        require_roles(*CONTENT_MANAGEMENT_ROLES)
+    ),
 ):
     course = db.scalar(
         select(Course).where(
@@ -132,7 +144,9 @@ def upload_material(
 def get_material(
     material_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(
+        require_roles(*CONTENT_MANAGEMENT_ROLES)
+    ),
 ):
     material = db.scalar(
         select(Material).where(

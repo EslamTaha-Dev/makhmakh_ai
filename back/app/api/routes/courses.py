@@ -26,7 +26,9 @@ def list_courses(
     current_user: User = Depends(get_current_user),
 ):
     courses = db.scalars(
-        select(Course).order_by(Course.created_at.desc())
+        select(Course).order_by(
+            Course.created_at.desc()
+        )
     ).all()
 
     return courses

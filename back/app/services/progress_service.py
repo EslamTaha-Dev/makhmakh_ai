@@ -25,6 +25,10 @@ def refresh_user_progress(db, user_id, course_id):
                 status="locked",
             )
             db.add(progress)
+            db.flush()
+
+        if progress.status == "completed":
+            continue
 
         prerequisites = db.scalars(
             select(ConceptPrerequisite).where(
@@ -33,27 +37,27 @@ def refresh_user_progress(db, user_id, course_id):
         ).all()
 
         if not prerequisites:
-            if progress.status == "locked":
-                progress.status = "available"
-
+            progress.status = "available"
             continue
 
-        prerequisite_ids = [
+        prerequisite_ids = {
             item.prerequisite_concept_id
             for item in prerequisites
-        ]
+        }
 
-        completed_count = db.scalar(
-            select(StudentProgress)
-            .where(
-                StudentProgress.user_id == user_id,
-                StudentProgress.concept_id.in_(prerequisite_ids),
-                StudentProgress.status == "completed",
-            )
+        completed_ids = set(
+            db.scalars(
+                select(StudentProgress.concept_id).where(
+                    StudentProgress.user_id == user_id,
+                    StudentProgress.concept_id.in_(
+                        prerequisite_ids
+                    ),
+                    StudentProgress.status == "completed",
+                )
+            ).all()
         )
 
-        if completed_count:
-            if progress.status == "locked":
-                progress.status = "available"
-
-    db.commit()
+        if prerequisite_ids.issubset(completed_ids):
+            progress.status = "available"
+        else:
+            progress.status = "locked"

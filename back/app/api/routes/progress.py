@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import require_student
 from app.db.session import get_db
 from app.models.concept import Concept
 from app.models.progress import StudentProgress
@@ -26,7 +26,7 @@ router = APIRouter(
 def complete_concept(
     concept_id: uuid.UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_student),
 ):
     concept = db.scalar(
         select(Concept).where(
@@ -47,19 +47,21 @@ def complete_concept(
         )
     )
 
+    now = datetime.now(timezone.utc)
+
     if progress is None:
         progress = StudentProgress(
             user_id=current_user.id,
             concept_id=concept_id,
             status="completed",
-            completed_at=datetime.now(timezone.utc),
+            completed_at=now,
         )
 
         db.add(progress)
 
     else:
         progress.status = "completed"
-        progress.completed_at = datetime.now(timezone.utc)
+        progress.completed_at = now
 
     refresh_user_progress(
         db=db,
@@ -79,7 +81,7 @@ def complete_concept(
 )
 def get_my_progress(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_student),
 ):
     progress = db.scalars(
         select(StudentProgress)

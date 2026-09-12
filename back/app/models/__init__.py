@@ -7,6 +7,9 @@ from app.models.chat import ChatSession, ChatMessage
 from app.models.progress import StudentProgress
 from app.models.processing_job import ProcessingJob
 from app.models.content_chunk import ContentChunk
+from app.models.refresh_token import RefreshToken
+from app.models.security_event import SecurityEvent
+from app.models.role import Role, UserRole
 
 __all__ = [
     "User",
@@ -20,4 +23,8 @@ __all__ = [
     "StudentProgress",
     "ProcessingJob",
     "ContentChunk",
+    "RefreshToken",
+    "SecurityEvent",
+    "Role",
+"UserRole",
 ]

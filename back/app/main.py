@@ -15,9 +15,10 @@ from app.api.routes.concepts import router as concepts_router
 from app.api.routes.progress import router as progress_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.lessons import router as lessons_router
-
+from app.api.routes.evaluation import router as evaluation_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
+from app.api.routes.admin import router as admin_router
 
 
 app = FastAPI(
@@ -87,6 +88,14 @@ app.include_router(
 
 app.include_router(
     chat_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    evaluation_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    admin_router,
     prefix="/api/v1",
 )
 

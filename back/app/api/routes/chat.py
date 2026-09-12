@@ -35,7 +35,6 @@ def chat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Check that the course exists
     course = db.scalar(
         select(Course).where(
             Course.id == course_id
@@ -48,7 +47,6 @@ def chat(
             detail="Course not found",
         )
 
-    # Get existing session or create a new one
     if data.session_id:
         session = db.scalar(
             select(ChatSession).where(
@@ -73,7 +71,6 @@ def chat(
         db.add(session)
         db.flush()
 
-    # Save user message
     user_message = ChatMessage(
         session_id=session.id,
         role="user",
@@ -84,7 +81,6 @@ def chat(
     db.add(user_message)
     db.flush()
 
-    # Generate RAG answer
     try:
         result = answer_question(
             course_id=str(course_id),
@@ -96,7 +92,7 @@ def chat(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate answer: {str(exc)}",
+            detail="Failed to generate answer",
         ) from exc
 
     answer = result.get(
@@ -109,7 +105,6 @@ def chat(
         [],
     )
 
-    # Save assistant message
     assistant_message = ChatMessage(
         session_id=session.id,
         role="assistant",

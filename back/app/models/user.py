@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,6 +40,22 @@ class User(Base):
         default="student",
     )
 
+    failed_login_attempts: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    last_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=datetime.utcnow,
@@ -64,6 +80,22 @@ class User(Base):
 
     chat_sessions = relationship(
         "ChatSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    refresh_tokens = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    security_events = relationship(
+        "SecurityEvent",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    user_roles = relationship(
+        "UserRole",
         back_populates="user",
         cascade="all, delete-orphan",
     )

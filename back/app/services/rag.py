@@ -7,14 +7,40 @@ def build_context(results: list[dict]) -> str:
 
     parts = []
 
-    for index, result in enumerate(results, start=1):
+    for index, result in enumerate(
+        results,
+        start=1,
+    ):
+        graph_info = result.get(
+            "related_concepts",
+            [],
+        )
+
+        concept_text = ""
+
+        if graph_info:
+            concept_lines = []
+
+            for concept in graph_info:
+                concept_lines.append(
+                    f"- {concept['name']}: "
+                    f"{concept.get('description', '')}"
+                )
+
+            concept_text = (
+                "\nRELATED CONCEPTS:\n"
+                + "\n".join(concept_lines)
+            )
+
         parts.append(
             f"""
 SOURCE {index}
 FILE: {result["file_name"]}
 CHUNK_ID: {result["chunk_id"]}
+DISTANCE: {result["distance"]}
 
 {result["text"]}
+{concept_text}
 """.strip()
         )
 
