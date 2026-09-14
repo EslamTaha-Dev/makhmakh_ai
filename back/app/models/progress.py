@@ -29,12 +29,14 @@ class StudentProgress(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     concept_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("concepts.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
 
     status: Mapped[str] = mapped_column(
