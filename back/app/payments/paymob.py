@@ -18,11 +18,36 @@ from app.payments.types import (
 class PaymobProvider(PaymentProvider):
     name = "paymob"
 
+    HMAC_FIELDS = (
+        "amount_cents",
+        "created_at",
+        "currency",
+        "error_occured",
+        "has_parent_transaction",
+        "id",
+        "integration_id",
+        "is_3d_secure",
+        "is_auth",
+        "is_capture",
+        "is_refunded",
+        "is_standalone_payment",
+        "is_voided",
+        "order.id",
+        "owner",
+        "pending",
+        "source_data.pan",
+        "source_data.sub_type",
+        "source_data.type",
+        "success",
+    )
+
     def __init__(self):
         settings = get_settings()
 
         self.base_url = settings.paymob_base_url.rstrip("/")
         self.api_key = settings.paymob_api_key
+        self.public_key = settings.paymob_public_key
+        self.integration_id = settings.paymob_integration_id
         self.hmac_secret = settings.paymob_hmac_secret
         self.checkout_url = settings.paymob_checkout_url
         self.timeout = settings.payment_request_timeout_seconds
@@ -53,6 +78,78 @@ class PaymobProvider(PaymentProvider):
         request: PaymentRequest,
     ) -> CheckoutSession:
         self._validate_configuration()
+
+        if self.integration_id is not None:
+            amount_cents = int(
+                (request.amount * 100).quantize(Decimal("1"))
+            )
+            intention_url = (
+                f"{self.base_url}/v1/intention"
+            )
+            intention_payload = {
+                "amount": amount_cents,
+                "currency": request.currency,
+                "payment_methods": [self.integration_id],
+                "items": [
+                    {
+                        "name": request.order_id,
+                        "amount": amount_cents,
+                        "quantity": 1,
+                    }
+                ],
+                "billing_data": {
+                    "first_name": request.customer.name,
+                    "last_name": "Customer",
+                    "email": request.customer.email,
+                    "phone_number": request.customer.phone or "",
+                },
+                "customer": {
+                    "email": request.customer.email,
+                    "phone_number": request.customer.phone or "",
+                },
+                "merchant_order_id": request.order_id,
+            }
+
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    response = client.post(
+                        intention_url,
+                        json=intention_payload,
+                        headers=self._headers(),
+                    )
+                response.raise_for_status()
+                data = response.json()
+            except (httpx.TimeoutException, httpx.RequestError) as exc:
+                raise RuntimeError(
+                    "Unable to connect to Paymob"
+                ) from exc
+            except httpx.HTTPStatusError as exc:
+                raise RuntimeError(
+                    f"Paymob returned HTTP {exc.response.status_code}"
+                ) from exc
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Paymob returned invalid intention JSON"
+                ) from exc
+
+            if not isinstance(data, dict) or not data.get("id"):
+                raise RuntimeError(
+                    "Paymob intention response is invalid"
+                )
+
+            checkout_url = (
+                data.get("checkout_url")
+                or data.get("payment_key")
+                or self.checkout_url
+            )
+
+            return CheckoutSession(
+                provider=self.name,
+                external_id=str(data["id"]),
+                checkout_url=checkout_url,
+                status=PaymentStatus.PROCESSING,
+                raw_response=data,
+            )
 
         payload = {
             "amount": str(request.amount),
@@ -150,10 +247,17 @@ class PaymobProvider(PaymentProvider):
                 "Invalid Paymob webhook signature"
             )
 
+        transaction = payload.get("obj", payload)
+
+        if not isinstance(transaction, dict):
+            raise ValueError(
+                "Paymob webhook payload is invalid"
+            )
+
         event_id = str(
-            payload.get("id")
-            or payload.get("event_id")
-            or payload.get("transaction_id")
+            transaction.get("id")
+            or transaction.get("event_id")
+            or transaction.get("transaction_id")
             or ""
         ).strip()
 
@@ -164,22 +268,22 @@ class PaymobProvider(PaymentProvider):
 
         external_id = None
 
-        if payload.get("transaction_id") is not None:
+        if transaction.get("transaction_id") is not None:
             external_id = str(
-                payload["transaction_id"]
+                transaction["transaction_id"]
             )
-        elif payload.get("id") is not None:
+        elif transaction.get("id") is not None:
             external_id = str(
-                payload["id"]
+                transaction["id"]
             )
 
         event_type = str(
-            payload.get("type")
-            or payload.get("event_type")
+            transaction.get("type")
+            or transaction.get("event_type")
             or "payment.updated"
         )
 
-        success = payload.get("success")
+        success = transaction.get("success")
 
         if success is True:
             payment_status = PaymentStatus.PAID
@@ -201,37 +305,28 @@ class PaymobProvider(PaymentProvider):
         self,
         payload: dict[str, Any],
     ) -> str:
-        source_data = payload.get("source_data")
+        transaction = payload.get("obj", payload)
 
-        if not isinstance(source_data, dict):
-            source_data = {}
+        if not isinstance(transaction, dict):
+            raise ValueError("Paymob webhook payload is invalid")
 
-        ordered_values = [
-            payload.get("amount_cents"),
-            payload.get("created_at"),
-            payload.get("currency"),
-            payload.get("error_occured"),
-            payload.get("has_parent_transaction"),
-            payload.get("id"),
-            payload.get("integration_id"),
-            payload.get("is_3d_secure"),
-            payload.get("is_auth"),
-            payload.get("is_capture"),
-            payload.get("is_refunded"),
-            payload.get("is_standalone_payment"),
-            payload.get("is_voided"),
-            payload.get("order"),
-            payload.get("owner"),
-            payload.get("pending"),
-            source_data.get("pan"),
-            source_data.get("sub_type"),
-            source_data.get("type"),
-            payload.get("success"),
-        ]
+        def get_value(path: str) -> str:
+            value: Any = transaction
+
+            for part in path.split("."):
+                if not isinstance(value, dict):
+                    return ""
+
+                value = value.get(part)
+
+            if isinstance(value, bool):
+                return "true" if value else "false"
+
+            return "" if value is None else str(value)
 
         message = "".join(
-            str(value) if value is not None else ""
-            for value in ordered_values
+            get_value(field)
+            for field in self.HMAC_FIELDS
         )
 
         return hmac.new(

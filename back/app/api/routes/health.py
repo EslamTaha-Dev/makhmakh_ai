@@ -30,16 +30,9 @@ def check_redis() -> bool:
 
 
 @router.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    database_ok = check_database(db)
-    redis_ok = check_redis()
-
-    all_ok = database_ok and redis_ok
-
+def health_check():
     return {
-        "status": "ok" if all_ok else "degraded",
-        "database": "ok" if database_ok else "error",
-        "queue": "ok" if redis_ok else "error",
+        "status": "ok",
     }
 
 
@@ -51,6 +44,7 @@ def liveness_check():
 
 
 @router.get("/health/ready")
+@router.get("/ready")
 def readiness_check(db: Session = Depends(get_db)):
     database_ok = check_database(db)
     redis_ok = check_redis()

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,26 @@ class ContentChunk(Base):
         UUID(as_uuid=True),
         ForeignKey("materials.id", ondelete="CASCADE"),
         nullable=False,
+    )
+
+    node_id: Mapped[str | None] = mapped_column(
+        String(255),
+        ForeignKey("graph_nodes.node_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    embedding_model: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default="all-MiniLM-L6-v2",
+        index=True,
+    )
+
+    embedding_dimension: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=384,
     )
 
     chunk_text: Mapped[str] = mapped_column(

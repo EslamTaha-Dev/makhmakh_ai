@@ -26,6 +26,9 @@ def generate_audio_placeholder(
 
     output_path = AUDIO_DIR / f"{lesson_id}.wav"
 
+    if output_path.exists() and output_path.stat().st_size > 0:
+        return str(output_path)
+
     pipeline = get_pipeline()
 
     generator = pipeline(

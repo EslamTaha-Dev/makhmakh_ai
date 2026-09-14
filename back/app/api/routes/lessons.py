@@ -10,6 +10,7 @@ from app.models.concept import Concept
 from app.models.course import Course
 from app.models.lesson import Lesson
 from app.models.user import User
+from app.models.processing_job import ProcessingJob
 from app.schemas.lesson import LessonResponse
 from app.services.queue import video_queue
 
@@ -126,3 +127,70 @@ def get_lesson(
         )
 
     return lesson
+
+
+@router.post("/{lesson_id}/video/generate")
+def generate_video(
+    lesson_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(*CONTENT_MANAGEMENT_ROLES)),
+):
+    lesson = db.scalar(select(Lesson).where(Lesson.id == lesson_id))
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    existing_job = db.scalar(
+        select(ProcessingJob)
+        .where(
+            ProcessingJob.lesson_id == lesson.id,
+            ProcessingJob.status.in_(["pending", "processing"]),
+        )
+        .order_by(ProcessingJob.created_at.desc())
+    )
+    if existing_job is not None:
+        return {
+            "job_id": str(existing_job.id),
+            "status": existing_job.status,
+            "progress_percent": existing_job.progress_percent,
+        }
+
+    lesson.status = "pending"
+    db.commit()
+    try:
+        job = video_queue.enqueue(
+            "app.services.lesson_job.generate_lesson_job",
+            str(lesson.id),
+            job_timeout=1800,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Video queue unavailable") from exc
+
+    return {"queue_job_id": job.id, "status": "queued"}
+
+
+@router.get("/{lesson_id}/video/status")
+def video_status(
+    lesson_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lesson = db.scalar(select(Lesson).where(Lesson.id == lesson_id))
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+    job = db.scalar(
+        select(ProcessingJob)
+        .where(ProcessingJob.lesson_id == lesson.id)
+        .order_by(ProcessingJob.created_at.desc())
+    )
+    if job is None:
+        return {"lesson_id": str(lesson.id), "status": lesson.status, "progress_percent": 0}
+    return {
+        "lesson_id": str(lesson.id),
+        "job_id": str(job.id),
+        "status": job.status,
+        "progress_percent": job.progress_percent,
+        "video_url": job.output_video_url or lesson.video_url,
+        "thumbnail_url": job.output_thumbnail_url,
+        "error_message": job.error_message,
+        "attempt_count": job.attempt_count,
+    }

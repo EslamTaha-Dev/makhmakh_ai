@@ -285,16 +285,15 @@ def process_webhook(
         )
 
     if payment is None:
-        event.processed = True
-        event.processed_at = datetime.now(timezone.utc)
+        event.event_type = "pending_reconciliation"
 
         db.commit()
 
         return {
-            "status": "ignored",
+            "status": "pending_reconciliation",
             "event_id": result.event_id,
             "provider": provider_name,
-            "message": "Payment not found",
+            "message": "Payment not found yet; event stored for reconciliation",
         }
 
     status_changed = False
@@ -362,6 +361,7 @@ def process_webhook(
     "/webhooks/paymob",
 )
 def paymob_webhook(
+    request: Request,
     payload: dict,
     x_paymob_signature: str | None = Header(
         default=None,
@@ -372,7 +372,10 @@ def paymob_webhook(
     return process_webhook(
         provider_name="paymob",
         payload=payload,
-        signature=x_paymob_signature,
+        signature=(
+            request.query_params.get("hmac")
+            or x_paymob_signature
+        ),
         db=db,
     )
 

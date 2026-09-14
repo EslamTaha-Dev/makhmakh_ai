@@ -8,8 +8,6 @@ from app.db.session import get_db
 from app.models.user import User
 
 security = HTTPBearer()
-
-
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
@@ -48,6 +46,12 @@ def get_current_user(
             detail="User not found",
         )
 
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is not active",
+        )
+
     return user
 
 
@@ -59,8 +63,6 @@ def get_user_roles(
         for user_role in user.user_roles
         if user_role.role is not None
     }
-
-    # Temporary backward compatibility with the existing role column.
     if not roles and user.role:
         roles.add(user.role)
 
@@ -80,6 +82,13 @@ def require_roles(*allowed_roles: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
             )
+
+        if user_roles.intersection({"admin", "super_admin"}) and allowed.intersection({"admin", "super_admin"}):
+            if current_user.mfa_secret is None or current_user.mfa_secret.enabled_at is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="MFA setup is required for admin access",
+                )
 
         return current_user
 

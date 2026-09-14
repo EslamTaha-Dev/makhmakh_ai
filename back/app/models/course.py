@@ -46,6 +46,13 @@ class Course(Base):
         nullable=False,
     )
 
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
     creator = relationship(
         "User",
         back_populates="courses_created",
@@ -71,6 +78,24 @@ class Course(Base):
 
     payments = relationship(
         "Payment",
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
+
+    modules = relationship(
+        "Module",
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
+
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="course",
+        cascade="all, delete-orphan",
+    )
+
+    ai_conversations = relationship(
+        "AIConversation",
         back_populates="course",
         cascade="all, delete-orphan",
     )

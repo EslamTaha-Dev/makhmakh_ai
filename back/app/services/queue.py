@@ -29,3 +29,8 @@ payment_queue = Queue(
     "payment_processing",
     connection=redis_connection,
 )
+
+email_queue = Queue(
+    "email_delivery",
+    connection=redis_connection,
+)

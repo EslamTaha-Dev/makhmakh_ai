@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from app.api.routes.graph import router as graph_router
 
 from app.api.routes.admin import router as admin_router
 from app.api.routes.auth import router as auth_router
@@ -20,6 +21,7 @@ from app.api.routes.map import router as map_router
 from app.api.routes.materials import router as materials_router
 from app.api.routes.payments import router as payments_router
 from app.api.routes.progress import router as progress_router
+from app.api.routes.student import router as student_router
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.rate_limit import limiter
@@ -30,13 +32,83 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 
-logger = logging.getLogger("bosla")
+logger = logging.getLogger("makhmakh")
 
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="Bosla (بوصلة) — Educational AI Backend API",
+    description="makhmakh — Educational AI Backend API",
+)
+
+app.include_router(
+    graph_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    admin_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    auth_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    chat_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    concepts_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    courses_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    evaluation_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    health_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    lessons_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    map_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    materials_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    payments_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    progress_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    student_router,
+    prefix="/api/v1",
 )
 
 
@@ -66,6 +138,10 @@ async def request_logging_middleware(
         duration_ms = (time.perf_counter() - start_time) * 1000
 
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
 
         logger.info(
             "HTTP request | request_id=%s | method=%s | path=%s | status=%s | duration_ms=%.2f",

@@ -53,6 +53,17 @@ class FawryProvider(PaymentProvider):
             raw.encode("utf-8")
         ).hexdigest()
 
+    def _webhook_signature(self, payload: dict) -> str:
+        values = [
+            payload.get("requestId"),
+            payload.get("fawryRefNumber"),
+            payload.get("merchantRefNumber"),
+            payload.get("paymentAmount"),
+            payload.get("orderStatus"),
+        ]
+
+        return self._generate_signature(values)
+
     def _request(
         self,
         method: str,
@@ -269,13 +280,24 @@ class FawryProvider(PaymentProvider):
         else:
             payment_status = None
 
-        expected_signature = self._generate_signature(
-            [
-                external_id,
-                payload.get("status"),
-                payload.get("amount"),
-            ]
-        )
+        if {
+            "requestId",
+            "fawryRefNumber",
+            "merchantRefNumber",
+            "paymentAmount",
+            "orderStatus",
+        }.issubset(payload):
+            expected_signature = self._webhook_signature(
+                payload
+            )
+        else:
+            expected_signature = self._generate_signature(
+                [
+                    external_id,
+                    payload.get("status"),
+                    payload.get("amount"),
+                ]
+            )
 
         if (
             not self.security_key
@@ -297,3 +319,66 @@ class FawryProvider(PaymentProvider):
             status=payment_status,
             payload=payload,
         )
+
+    def get_payment_status(
+        self,
+        external_id: str,
+    ) -> str:
+        if not external_id:
+            raise ValueError(
+                "Fawry payment reference is required"
+            )
+
+        response = self._request(
+            "GET",
+            f"/payments/{external_id}",
+        )
+
+        return str(
+            response.get("orderStatus")
+            or response.get("paymentStatus")
+            or response.get("status")
+            or "unknown"
+        )
+
+    def refund_payment(
+        self,
+        external_id: str,
+        amount: Decimal | None = None,
+    ) -> bool:
+        if not external_id:
+            raise ValueError(
+                "Fawry payment reference is required"
+            )
+
+        payload = {
+            "merchantCode": self.merchant_code,
+            "referenceNumber": external_id,
+        }
+
+        if amount is not None:
+            payload["refundAmount"] = float(amount)
+
+        response = self._request(
+            "POST",
+            "/payments/refund",
+            json=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+
+        status_value = str(
+            response.get("status")
+            or response.get("orderStatus")
+            or response.get("statusCode")
+            or ""
+        ).lower()
+
+        return status_value in {
+            "200",
+            "success",
+            "successful",
+            "refunded",
+        }

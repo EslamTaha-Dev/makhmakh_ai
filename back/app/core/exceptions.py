@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-logger = logging.getLogger("bosla")
+logger = logging.getLogger("makhmakh")
 
 
 def register_exception_handlers(app: FastAPI) -> None:

@@ -1,6 +1,9 @@
 from functools import lru_cache
 from sentence_transformers import SentenceTransformer
-MODEL_NAME = "intfloat/multilingual-e5-small"
+from app.core.config import get_settings
+
+
+MODEL_NAME = get_settings().active_embedding_model
 @lru_cache(maxsize=1)
 def get_embedding_model() -> SentenceTransformer:
     return SentenceTransformer(MODEL_NAME)

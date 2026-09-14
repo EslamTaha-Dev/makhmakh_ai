@@ -3,6 +3,7 @@ from rq import SimpleWorker
 from app.services.payment_reconciliation import start_payment_reconciliation
 from app.services.queue import (
     payment_queue,
+    email_queue,
     processing_queue,
     redis_connection,
     video_queue,
@@ -17,6 +18,7 @@ if __name__ == "__main__":
             processing_queue,
             video_queue,
             payment_queue,
+            email_queue,
         ],
         connection=redis_connection,
         default_worker_ttl=600,

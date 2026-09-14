@@ -58,7 +58,7 @@ def create_slides(script: dict, lesson_id: str) -> list[str]:
 
     draw.text(
         (80, 220),
-        "Bosla Educational Lesson",
+        "makhmakh Educational Lesson",
         fill="black",
         font=body_font,
     )

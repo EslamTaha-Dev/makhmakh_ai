@@ -12,7 +12,7 @@ from app.services.queue import payment_queue
 settings = get_settings()
 
 SCHEDULER_LOCK_KEY = (
-    "bosla:payment-reconciliation:scheduler-lock"
+    "makhmakh:payment-reconciliation:scheduler-lock"
 )
 
 SCHEDULER_LOCK_TTL = (

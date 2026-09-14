@@ -19,7 +19,6 @@ def seed_roles():
     db = SessionLocal()
 
     try:
-        # Create roles
         for role_name, description in ROLES:
             existing_role = db.scalar(
                 select(Role).where(Role.name == role_name)
@@ -34,14 +33,10 @@ def seed_roles():
                 )
 
         db.commit()
-
-        # Reload roles
         roles = {
             role.name: role
             for role in db.scalars(select(Role)).all()
         }
-
-        # Assign existing users to their current role
         users = db.scalars(select(User)).all()
 
         for user in users:

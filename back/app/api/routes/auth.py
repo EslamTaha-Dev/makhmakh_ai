@@ -1,3 +1,6 @@
+import uuid
+import pyotp
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -6,25 +9,36 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.rate_limit import limiter
+from app.core.config import get_settings
 from app.core.security import (
     create_access_token,
     generate_refresh_token,
     hash_password,
     hash_refresh_token,
+    generate_one_time_token,
+    encrypt_mfa_secret,
+    decrypt_mfa_secret,
+    password_needs_rehash,
     verify_password,
 )
 from app.db.session import get_db
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role, UserRole
 from app.models.user import User
+from app.models.temporary_token import PasswordResetToken, EmailVerificationToken
 from app.schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
     UserResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    VerifyEmailRequest,
+    ChangePasswordRequest,
 )
 from app.services.security_events import record_security_event
+from app.services.queue import email_queue
 
 
 router = APIRouter(
@@ -35,7 +49,7 @@ router = APIRouter(
 
 MAX_FAILED_LOGIN_ATTEMPTS = 5
 LOCKOUT_MINUTES = 15
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 
 @router.post(
@@ -89,6 +103,15 @@ def register(
 
     db.add(user_role)
 
+    verification_token = generate_one_time_token()
+    db.add(
+        EmailVerificationToken(
+            user_id=user.id,
+            token_hash=hash_refresh_token(verification_token),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+        )
+    )
+
     record_security_event(
         db=db,
         event_type="user_registered",
@@ -98,10 +121,116 @@ def register(
     db.commit()
     db.refresh(user)
 
-    return user
+    try:
+        email_queue.enqueue(
+            "app.services.email_job.send_email_job",
+            user.email,
+            "Verify your Bosla email",
+            f"Verify your email: {get_settings().email_verification_url}?token={verification_token}",
+            job_timeout=60,
+        )
+    except Exception:
+        pass
+
+    response = {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "created_at": user.created_at,
+    }
+    if get_settings().environment == "development":
+        response["verification_token"] = verification_token
+    return response
 
 
-@limiter.limit("5/minute")
+@router.post("/verify-email")
+def verify_email(data: VerifyEmailRequest, db: Session = Depends(get_db)):
+    token = db.scalar(
+        select(EmailVerificationToken).where(
+            EmailVerificationToken.token_hash == hash_refresh_token(data.token),
+            EmailVerificationToken.used_at.is_(None),
+        )
+    )
+    now = datetime.now(timezone.utc)
+    if token is None or token.expires_at <= now:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+    user = db.scalar(select(User).where(User.id == token.user_id))
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid verification token")
+    token.used_at = now
+    user.email_verified_at = now
+    db.commit()
+    return {"status": "verified"}
+
+
+@limiter.limit("3/hour")
+@router.post("/forgot-password")
+def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.email == data.email.lower()))
+    if user is not None:
+        raw_token = generate_one_time_token()
+        db.add(
+            PasswordResetToken(
+                user_id=user.id,
+                token_hash=hash_refresh_token(raw_token),
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+            )
+        )
+        record_security_event(db=db, event_type="password_reset_requested", user_id=user.id, request=request)
+        db.commit()
+        try:
+            email_queue.enqueue(
+                "app.services.email_job.send_email_job",
+                user.email,
+                "Reset your Bosla password",
+                f"Reset your password: {get_settings().password_reset_url}?token={raw_token}",
+                job_timeout=60,
+            )
+        except Exception:
+            pass
+        response = {"status": "accepted"}
+        if get_settings().environment == "development":
+            response["reset_token"] = raw_token
+        return response
+    return {"status": "accepted"}
+
+
+@router.post("/reset-password")
+def reset_password(request: Request, data: ResetPasswordRequest, db: Session = Depends(get_db)):
+    token = db.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == hash_refresh_token(data.token),
+            PasswordResetToken.used_at.is_(None),
+        )
+    )
+    now = datetime.now(timezone.utc)
+    if token is None or token.expires_at <= now:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    user = db.scalar(select(User).where(User.id == token.user_id))
+    if user is None:
+        raise HTTPException(status_code=400, detail="Invalid reset token")
+    user.password_hash = hash_password(data.new_password)
+    token.used_at = now
+    db.execute(update(RefreshToken).where(RefreshToken.user_id == user.id).values(revoked=True, revoked_at=now, revoked_reason="password_changed"))
+    record_security_event(db=db, event_type="password_reset_completed", user_id=user.id, request=request)
+    db.commit()
+    return {"status": "password_reset"}
+
+
+@router.post("/change-password")
+def change_password(request: Request, data: ChangePasswordRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is invalid")
+    current_user.password_hash = hash_password(data.new_password)
+    now = datetime.now(timezone.utc)
+    db.execute(update(RefreshToken).where(RefreshToken.user_id == current_user.id).values(revoked=True, revoked_at=now, revoked_reason="password_changed"))
+    record_security_event(db=db, event_type="password_changed", user_id=current_user.id, request=request)
+    db.commit()
+    return {"status": "password_changed"}
+
+
+@limiter.limit("5/15minutes")
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -130,6 +259,12 @@ def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        )
+
+    if user.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is not active",
         )
 
     now = datetime.now(timezone.utc)
@@ -218,6 +353,11 @@ def login(
     user.locked_until = None
     user.last_login_at = now
 
+    if not user.password_hash.startswith("$argon2"):
+        user.password_hash = hash_password(data.password)
+    elif password_needs_rehash(user.password_hash):
+        user.password_hash = hash_password(data.password)
+
     access_token = create_access_token(
         str(user.id)
     )
@@ -236,6 +376,9 @@ def login(
             )
         ),
         revoked=False,
+        family_id=uuid.uuid4(),
+        device_label=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
     )
 
     db.add(refresh_token_record)
@@ -288,7 +431,18 @@ def refresh_token(
             detail="Invalid refresh token",
         )
 
+    now = datetime.now(timezone.utc)
+
     if stored_token.revoked:
+        db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.family_id == stored_token.family_id)
+            .values(
+                revoked=True,
+                revoked_at=now,
+                revoked_reason="reuse_detected",
+            )
+        )
         record_security_event(
             db=db,
             event_type="refresh_token_reuse",
@@ -305,8 +459,6 @@ def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token has been revoked",
         )
-
-    now = datetime.now(timezone.utc)
 
     if stored_token.expires_at <= now:
         stored_token.revoked = True
@@ -348,6 +500,8 @@ def refresh_token(
         )
 
     stored_token.revoked = True
+    stored_token.revoked_at = now
+    stored_token.revoked_reason = "rotation"
 
     new_access_token = create_access_token(
         str(user.id)
@@ -367,6 +521,9 @@ def refresh_token(
             )
         ),
         revoked=False,
+        family_id=stored_token.family_id,
+        device_label=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
     )
 
     db.add(new_refresh_token_record)
@@ -384,6 +541,143 @@ def refresh_token(
         access_token=new_access_token,
         refresh_token=new_refresh_token,
     )
+
+
+@router.get("/sessions")
+def list_sessions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sessions = db.scalars(
+        select(RefreshToken)
+        .where(
+            RefreshToken.user_id == current_user.id,
+            RefreshToken.revoked.is_(False),
+        )
+        .order_by(RefreshToken.created_at.desc())
+    ).all()
+    return [
+        {
+            "id": str(session.id),
+            "family_id": str(session.family_id),
+            "device_label": session.device_label,
+            "ip_address": session.ip_address,
+            "created_at": session.created_at,
+            "expires_at": session.expires_at,
+        }
+        for session in sessions
+    ]
+
+
+@router.delete("/sessions/{session_id}")
+def revoke_session(
+    session_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    session = db.scalar(
+        select(RefreshToken).where(
+            RefreshToken.id == session_id,
+            RefreshToken.user_id == current_user.id,
+        )
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session.revoked = True
+    session.revoked_at = datetime.now(timezone.utc)
+    session.revoked_reason = "logout"
+    db.commit()
+    return {"status": "revoked"}
+
+
+@router.delete("/sessions")
+def revoke_all_sessions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    now = datetime.now(timezone.utc)
+    db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.user_id == current_user.id, RefreshToken.revoked.is_(False))
+        .values(revoked=True, revoked_at=now, revoked_reason="logout_all")
+    )
+    db.commit()
+    return {"status": "revoked_all"}
+
+
+@router.post("/mfa/setup")
+def setup_mfa(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.mfa import MFASecret
+
+    secret = pyotp.random_base32()
+    record = db.scalar(select(MFASecret).where(MFASecret.user_id == current_user.id))
+    if record is None:
+        record = MFASecret(user_id=current_user.id, totp_secret=encrypt_mfa_secret(secret))
+        db.add(record)
+    else:
+        record.totp_secret = encrypt_mfa_secret(secret)
+        record.enabled_at = None
+    db.commit()
+    return {
+        "secret": secret,
+        "provisioning_uri": pyotp.TOTP(secret).provisioning_uri(
+            name=current_user.email,
+            issuer_name="Bosla",
+        ),
+    }
+
+
+@router.post("/mfa/verify")
+def verify_mfa(
+    code: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.mfa import MFASecret
+
+    record = db.scalar(select(MFASecret).where(MFASecret.user_id == current_user.id))
+    if record is None or not pyotp.TOTP(decrypt_mfa_secret(record.totp_secret)).verify(code, valid_window=1):
+        raise HTTPException(status_code=400, detail="Invalid MFA code")
+    record.enabled_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"status": "enabled"}
+
+
+@router.post("/mfa/recovery-codes")
+def create_mfa_recovery_codes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.mfa import MFASecret, MFARecoveryCode
+
+    secret = db.scalar(select(MFASecret).where(MFASecret.user_id == current_user.id))
+    if secret is None or secret.enabled_at is None:
+        raise HTTPException(status_code=409, detail="MFA is not enabled")
+    db.query(MFARecoveryCode).filter(MFARecoveryCode.user_id == current_user.id, MFARecoveryCode.used_at.is_(None)).delete(synchronize_session=False)
+    codes = [secrets.token_urlsafe(8) for _ in range(8)]
+    for code in codes:
+        db.add(MFARecoveryCode(user_id=current_user.id, code_hash=hash_refresh_token(code)))
+    db.commit()
+    return {"recovery_codes": codes}
+
+
+@router.post("/mfa/recovery-codes/verify")
+def verify_mfa_recovery_code(
+    code: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.mfa import MFARecoveryCode
+
+    recovery = db.scalar(select(MFARecoveryCode).where(MFARecoveryCode.user_id == current_user.id, MFARecoveryCode.code_hash == hash_refresh_token(code), MFARecoveryCode.used_at.is_(None)))
+    if recovery is None:
+        raise HTTPException(status_code=400, detail="Invalid recovery code")
+    recovery.used_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"status": "accepted"}
 
 
 @router.get(
@@ -409,7 +703,9 @@ def logout(
             RefreshToken.revoked.is_(False),
         )
         .values(
-            revoked=True
+            revoked=True,
+            revoked_at=datetime.now(timezone.utc),
+            revoked_reason="logout",
         )
     )
 

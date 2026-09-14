@@ -8,7 +8,7 @@ from app.core.security import hash_password
 
 
 def main():
-    print("=== Create Bosla Admin ===")
+    print("=== Create makhmakh Admin ===")
 
     name = input("Admin name: ").strip()
     email = input("Admin email: ").strip().lower()

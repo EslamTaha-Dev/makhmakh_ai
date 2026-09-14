@@ -14,6 +14,7 @@ def render_video(
     VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 
     output_path = VIDEO_DIR / f"{lesson_id}.mp4"
+    thumbnail_path = VIDEO_DIR / f"{lesson_id}.jpg"
     concat_file = VIDEO_DIR / f"{lesson_id}_slides.txt"
 
     audio_info = sf.info(audio_path)
@@ -31,6 +32,10 @@ def render_video(
                 f"file '{Path(slide_paths[-1]).resolve()}'\n"
             )
 
+    if output_path.exists() and output_path.stat().st_size > 0:
+        return str(output_path)
+
+    raw_output_path = VIDEO_DIR / f"{lesson_id}_raw.mp4"
     command = [
         "ffmpeg",
         "-y",
@@ -49,9 +54,44 @@ def render_video(
         "-c:a",
         "aac",
         "-shortest",
-        str(output_path),
+        str(raw_output_path),
     ]
 
     subprocess.run(command, check=True)
+
+    postprocess_command = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(raw_output_path),
+        "-c:v",
+        "libx264",
+        "-crf",
+        "23",
+        "-preset",
+        "medium",
+        "-af",
+        "loudnorm=I=-16:TP=-1.5:LRA=11",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+    subprocess.run(postprocess_command, check=True)
+
+    thumbnail_command = [
+        "ffmpeg",
+        "-y",
+        "-ss",
+        "3",
+        "-i",
+        str(output_path),
+        "-vframes",
+        "1",
+        "-q:v",
+        "2",
+        str(thumbnail_path),
+    ]
+    subprocess.run(thumbnail_command, check=True)
+    raw_output_path.unlink(missing_ok=True)
 
     return str(output_path)

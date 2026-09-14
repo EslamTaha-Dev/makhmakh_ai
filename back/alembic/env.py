@@ -26,7 +26,7 @@ target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Run migrations in offline mode."""
 
-    url = settings.DATABASE_URL
+    url = settings.database_url
 
     context.configure(
         url=url,

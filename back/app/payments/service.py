@@ -219,9 +219,6 @@ def create_payment(
             currency=currency,
             provider_name=provider_name,
         )
-
-    # Prevent creating another payment for an already
-    # pending/active subscription.
     existing_subscription = _get_active_or_pending_subscription(
         db,
         user_id=user.id,
@@ -280,8 +277,6 @@ def create_payment(
 
     except IntegrityError:
         db.rollback()
-
-        # Another request may have won the race.
         existing_payment = _get_existing_payment(
             db,
             idempotency_key,
@@ -414,20 +409,47 @@ def apply_payment_status(
     allowed_transitions = {
         PaymentStatus.PENDING: {
             PaymentStatus.PROCESSING,
+            PaymentStatus.AUTHORIZED,
             PaymentStatus.PAID,
             PaymentStatus.FAILED,
             PaymentStatus.CANCELED,
+            PaymentStatus.EXPIRED,
+            PaymentStatus.PENDING_RECONCILIATION,
         },
         PaymentStatus.PROCESSING: {
+            PaymentStatus.AUTHORIZED,
             PaymentStatus.PAID,
             PaymentStatus.FAILED,
             PaymentStatus.CANCELED,
+            PaymentStatus.EXPIRED,
+            PaymentStatus.PENDING_RECONCILIATION,
+        },
+        PaymentStatus.AUTHORIZED: {
+            PaymentStatus.PAID,
+            PaymentStatus.FAILED,
+            PaymentStatus.CANCELED,
+            PaymentStatus.EXPIRED,
+            PaymentStatus.PENDING_RECONCILIATION,
+        },
+        PaymentStatus.PENDING_RECONCILIATION: {
+            PaymentStatus.PENDING,
+            PaymentStatus.PROCESSING,
+            PaymentStatus.AUTHORIZED,
+            PaymentStatus.PAID,
+            PaymentStatus.FAILED,
+            PaymentStatus.CANCELED,
+            PaymentStatus.EXPIRED,
         },
         PaymentStatus.PAID: {
+            PaymentStatus.REFUNDED,
+            PaymentStatus.PARTIALLY_REFUNDED,
+        },
+        PaymentStatus.PARTIALLY_REFUNDED: {
             PaymentStatus.REFUNDED,
         },
         PaymentStatus.FAILED: set(),
         PaymentStatus.CANCELED: set(),
+        PaymentStatus.EXPIRED: set(),
         PaymentStatus.REFUNDED: set(),
     }
 
@@ -468,6 +490,7 @@ def apply_payment_status(
     elif new_status in {
         PaymentStatus.FAILED,
         PaymentStatus.CANCELED,
+        PaymentStatus.EXPIRED,
     }:
         if payment.subscription is not None:
             payment.subscription.status = "canceled"

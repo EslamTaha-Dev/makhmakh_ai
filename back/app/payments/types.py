@@ -7,10 +7,14 @@ from typing import Any
 class PaymentStatus(str, Enum):
     PENDING = "pending"
     PROCESSING = "processing"
+    AUTHORIZED = "authorized"
     PAID = "paid"
     FAILED = "failed"
     CANCELED = "canceled"
+    EXPIRED = "expired"
     REFUNDED = "refunded"
+    PARTIALLY_REFUNDED = "partially_refunded"
+    PENDING_RECONCILIATION = "pending_reconciliation"
 
 
 class SubscriptionStatus(str, Enum):

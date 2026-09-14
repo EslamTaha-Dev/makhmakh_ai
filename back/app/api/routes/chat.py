@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -15,7 +16,11 @@ from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
 )
-from app.services.rag_chat import answer_question
+from app.models.ai_interaction import AIInteraction
+from app.models.ai_conversation import AIConversation
+from app.models.ai_message import AIMessage
+from app.models.student_node_mastery import StudentNodeMastery
+from app.services.agent_service import run_agent
 
 
 router = APIRouter(
@@ -82,9 +87,12 @@ def chat(
     db.flush()
 
     try:
-        result = answer_question(
+        result = run_agent(
+            db=db,
+            user_id=current_user.id,
             course_id=str(course_id),
             question=data.message,
+            node_id=data.node_id,
         )
 
     except Exception as exc:
@@ -100,9 +108,104 @@ def chat(
         "I could not generate an answer.",
     )
 
-    sources = result.get(
-        "sources",
-        [],
+    tool_result = result.get(
+        "tool_result",
+        {},
+    )
+
+    tool_name = result.get(
+        "tool_name",
+    )
+
+    conversation = db.scalar(
+        select(AIConversation).where(
+            AIConversation.student_id == current_user.id,
+            AIConversation.course_id == course_id,
+        ).order_by(AIConversation.updated_at.desc())
+    )
+
+    if conversation is None:
+        conversation = AIConversation(
+            student_id=current_user.id,
+            course_id=course_id,
+            title=data.message[:255],
+        )
+        db.add(conversation)
+        db.flush()
+
+    db.add(
+        AIMessage(
+            conversation_id=conversation.id,
+            role="user",
+            content=data.message,
+        )
+    )
+
+    sources = []
+
+    if tool_name == "search_course_content":
+        search_results = tool_result.get(
+            "results",
+            [],
+        )
+
+        sources = [
+            {
+                "chunk_id": item.get("chunk_id"),
+                "material_id": item.get("material_id"),
+                "file_name": item.get("file_name"),
+                "text": item.get("text"),
+                "distance": item.get("distance"),
+            }
+            for item in search_results
+        ]
+
+    if data.node_id:
+        mastery = db.scalar(
+            select(StudentNodeMastery).where(
+                StudentNodeMastery.student_id == current_user.id,
+                StudentNodeMastery.node_id == data.node_id,
+            )
+        )
+        if mastery is None:
+            mastery = StudentNodeMastery(
+                student_id=current_user.id,
+                node_id=data.node_id,
+            )
+            db.add(mastery)
+        mastery.times_asked_about += 1
+        mastery.status = "needs_review" if mastery.times_asked_about >= 3 else "in_progress"
+        mastery.last_interacted_at = datetime.utcnow()
+
+    ai_interaction = AIInteraction(
+        user_id=current_user.id,
+        course_id=course_id,
+        question=data.message,
+        tools_used=[tool_name] if tool_name else [],
+        retrieved_chunks=(
+            tool_result.get("results", [])
+            if tool_name == "search_course_content"
+            else []
+        ),
+        answer=answer,
+        sources=sources,
+        conversation_id=conversation.id,
+        node_id=data.node_id,
+        model=result.get("model"),
+        latency_ms=result.get("latency_ms"),
+        tokens=None,
+        feedback=None,
+    )
+
+    db.add(ai_interaction)
+
+    db.add(
+        AIMessage(
+            conversation_id=conversation.id,
+            interaction=ai_interaction,
+            role="assistant",
+            content=answer,
+        )
     )
 
     assistant_message = ChatMessage(

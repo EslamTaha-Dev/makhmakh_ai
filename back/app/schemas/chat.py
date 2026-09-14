@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
     )
 
     session_id: uuid.UUID | None = None
+    node_id: str | None = Field(default=None, max_length=255)
 
 
 class ChatSource(BaseModel):

@@ -34,6 +34,9 @@ class User(Base):
         nullable=False,
     )
 
+    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", index=True)
+
     role: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
@@ -61,6 +64,8 @@ class User(Base):
         default=datetime.utcnow,
         nullable=False,
     )
+
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     courses_created = relationship(
         "Course",
@@ -108,5 +113,47 @@ class User(Base):
     payments = relationship(
         "Payment",
         back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    ai_interactions = relationship(
+        "AIInteraction",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    enrollments = relationship(
+        "Enrollment",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+
+    lesson_progress = relationship(
+        "StudentLessonProgress",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+
+    ai_conversations = relationship(
+        "AIConversation",
+        back_populates="student",
+        cascade="all, delete-orphan",
+    )
+
+    notifications = relationship(
+        "Notification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    oauth_accounts = relationship(
+        "OAuthAccount",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    mfa_secret = relationship(
+        "MFASecret",
+        back_populates="user",
+        uselist=False,
         cascade="all, delete-orphan",
     )
