@@ -5,10 +5,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-BASE_DIR = Path(__file__).resolve().parents[3]
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 ENV_FILE = BASE_DIR / ".env"
-
-
 class Settings(BaseSettings):
     app_name: str = "makhmakh Backend"
     app_version: str = "1.0.0"

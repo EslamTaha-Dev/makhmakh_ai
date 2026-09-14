@@ -1,5 +1,5 @@
 import json
-
+import os
 import httpx
 
 from app.core.config import get_settings
@@ -7,6 +7,7 @@ from app.core.config import get_settings
 
 class OllamaError(Exception):
     pass
+
 
 def generate_text(
     prompt: str,
@@ -25,36 +26,72 @@ def generate_text(
         "stream": False,
     }
 
-    try:
-        response = httpx.post(
-            f"{settings.ollama_base_url}/api/generate",
-            json=payload,
-            timeout=60.0,
-            trust_env=False,
-        )
-        response.raise_for_status()
+    api_keys = [
+        os.getenv("GEMINI_API_KEY_PRIMARY"),
+        os.getenv("GEMINI_API_KEY_BACKUP"),
+        os.getenv("OPENROUTER_API_KEY")
+    ]
+    api_keys = [key for key in api_keys if key]
 
-    except httpx.HTTPError as exc:
-        raise OllamaError(
-            f"Ollama request failed: {exc}"
-        ) from exc
+    if not api_keys:
+        api_keys = [None]
 
-    try:
-        data = response.json()
+    last_error = None
 
-    except ValueError as exc:
-        raise OllamaError(
-            "Ollama returned invalid JSON"
-        ) from exc
+    for index, api_key in enumerate(api_keys):
+        try:
+            headers = {}
+            
+            if api_key and api_key.startswith("sk-or"):
+                headers["Authorization"] = f"Bearer {api_key}"
+                headers["HTTP-Referer"] = "https://github.com/bosla"
+                headers["X-Title"] = "Bosla App"
+                
+                request_url = "https://openrouter.ai/api/v1/chat/completions"
+                
+                openrouter_payload = {
+                    "model": "google/gemini-2.5-flash",
+                    "messages": [{"role": "user", "content": full_prompt}]
+                }
+                
+                response = httpx.post(
+                    request_url,
+                    json=openrouter_payload,
+                    headers=headers,
+                    timeout=60.0,
+                    trust_env=False,
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                answer = data.get("choices", [{}])[0].get("message", {}).get("content")
 
-    answer = data.get("response")
+            else:
+                if api_key:
+                    headers["Authorization"] = f"Bearer {api_key}"
+                
+                response = httpx.post(
+                    f"{settings.ollama_base_url}/api/generate",
+                    json=payload,
+                    headers=headers,
+                    timeout=60.0,
+                    trust_env=False,
+                )
+                response.raise_for_status()
+                data = response.json()
+                
+                answer = data.get("response")
 
-    if not answer:
-        raise OllamaError(
-            "Ollama returned an empty response"
-        )
+            if answer:
+                return answer
 
-    return answer
+        except (httpx.HTTPError, Exception) as exc:
+            last_error = exc
+            continue
+
+    raise OllamaError(
+        f"فشلت كل المفاتيح والمصادر المتاحة. الخطأ الأخير: {last_error}"
+    )
 
 
 def _extract_json(text: str):
