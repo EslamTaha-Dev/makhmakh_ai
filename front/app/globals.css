@@ -1,26 +1,274 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* ============================================================================
+   Makhmakh AI — brand design system
+   ----------------------------------------------------------------------------
+   Palette is the Makhmakh brand palette and nothing else:
+     #FF5900  primary orange      #663300  dark brown
+     #FF8100  secondary orange    #FFC200  yellow
+     #FFEEA6  light yellow        #0C0C0C  near-black
+     #F4F4F4  light background
+   Typography: Thamanya Sans (UI), Hayah (headlines), Aviny (rare brand moments).
+   ========================================================================= */
+
+@theme {
+  --font-sans: var(--font-thmanyah), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-hayah), var(--font-thmanyah), Georgia, serif;
+  --font-brand: var(--font-aviny), var(--font-hayah), Georgia, serif;
+
+  /* Brand orange — primary actions and highlights */
+  --color-brand-50: #fff8ef;
+  --color-brand-100: #ffeea6;
+  --color-brand-200: #ffdd73;
+  --color-brand-300: #ffc200;
+  --color-brand-400: #ff8100;
+  --color-brand-500: #ff5900;
+  --color-brand-600: #e04e00;
+  --color-brand-700: #b83f00;
+
+  /* Brand brown — depth, strong contrast */
+  --color-cocoa-50: #f7f1ea;
+  --color-cocoa-100: #ead9c6;
+  --color-cocoa-200: #d6b795;
+  --color-cocoa-400: #995500;
+  --color-cocoa-600: #7d4000;
+  --color-cocoa-800: #663300;
+  --color-cocoa-900: #3f1f00;
+  --color-cocoa-950: #241200;
+
+  /* Neutrals */
+  --color-ink: #0c0c0c;
+  --color-surface: #f4f4f4;
+  --color-muted: #f7f4f1;
+  --color-muted-fg: #6f6357;
+  --color-line: #ece5dd;
+
+  --radius-brand: 1.125rem;
+  --radius-brand-lg: 1.75rem;
+  --radius-brand-xl: 2.25rem;
+
+  --shadow-soft: 0 1px 2px rgb(102 51 0 / 0.05), 0 8px 24px -12px rgb(102 51 0 / 0.16);
+  --shadow-lift: 0 2px 4px rgb(102 51 0 / 0.06), 0 18px 40px -16px rgb(102 51 0 / 0.24);
+  --shadow-brand: 0 12px 32px -12px rgb(255 89 0 / 0.45);
+
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: var(--color-ink);
+  --muted: #f7f4f1;
+  --muted-foreground: #6f6357;
+  --border-subtle: #ece5dd;
+  --sidebar: #fffdfb;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    /* Arabic needs a little more leading than Latin. */
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    line-height: 1.3;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  /* Latin text in Arabic headings should not inherit Arabic-looking metrics. */
+  :lang(en) h1,
+  :lang(en) h2,
+  :lang(en) h3 {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background: var(--color-brand-300);
+    color: var(--color-cocoa-900);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  /* Numerals stay legible inside Arabic layout. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility font-brand {
+  font-family: var(--font-brand);
+}
+
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+/* Signature brand gradient used for headline accents and CTA surfaces. */
+@utility brand-gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-brand-500) 0%,
+    var(--color-brand-400) 45%,
+    var(--color-brand-300) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility brand-gradient-surface {
+  background-image: linear-gradient(
+    135deg,
+    var(--color-brand-500) 0%,
+    var(--color-brand-400) 55%,
+    var(--color-brand-300) 100%
+  );
+}
+
+/* Warm radial wash used behind hero + auth sections. */
+@utility brand-wash {
+  background-image:
+    radial-gradient(
+      60rem 32rem at 85% -10%,
+      rgb(255 194 0 / 0.22),
+      transparent 60%
+    ),
+    radial-gradient(
+      48rem 28rem at 5% 5%,
+      rgb(255 89 0 / 0.14),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #fffdfa 0%, var(--color-surface) 100%);
+}
+
+@utility brand-grid {
+  background-image:
+    linear-gradient(rgb(102 51 0 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(102 51 0 / 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(70% 60% at 50% 0%, #000 30%, transparent 100%);
+}
+
+@utility hairline {
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+/* Soft brand glow behind the hero mark. */
+@utility brand-glow {
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    background: radial-gradient(
+      closest-side,
+      rgb(255 129 0 / 0.35),
+      transparent 75%
+    );
+    filter: blur(12px);
+    z-index: -1;
+  }
+}
+
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(102 51 0 / 0.25) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgb(102 51 0 / 0.22);
+    border-radius: 999px;
+  }
+}
+
+/* Long Arabic words in tight cards must never blow out the layout. */
+@utility break-arabic {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@utility text-balance-ar {
+  text-wrap: balance;
+}
+
+@keyframes brand-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+}
+
+@keyframes brand-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes brand-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 89 0 / 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgb(255 89 0 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 89 0 / 0);
+  }
+}
+
+@utility animate-brand-float {
+  animation: brand-float 7s var(--ease-brand) infinite;
+}
+
+@utility animate-brand-pulse-ring {
+  animation: brand-pulse-ring 2.4s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

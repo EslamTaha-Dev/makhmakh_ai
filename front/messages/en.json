@@ -1,0 +1,577 @@
+{
+  "meta": {
+    "title": "Makhmakh — AI-powered learning from your own material",
+    "description": "Makhmakh turns your lecture files into ordered concepts, a study map and an assistant that answers from your own content."
+  },
+  "common": {
+    "appName": "Makhmakh",
+    "appNameLatin": "Makhmakh AI",
+    "tagline": "Study smarter, from your own material",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "optional": "optional",
+    "required": "required",
+    "copy": "Copy",
+    "copied": "Copied",
+    "more": "More",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language",
+    "arabic": "العربية",
+    "english": "English",
+    "skipToContent": "Skip to main content",
+    "offlineHint": "Could not reach the server. Make sure the backend is running, then try again."
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "subjects": "Subjects",
+    "upload": "Upload",
+    "materials": "My files",
+    "chat": "AI assistant",
+    "settings": "Settings",
+    "login": "Sign in",
+    "register": "Get started",
+    "logout": "Sign out",
+    "account": "My account"
+  },
+  "landing": {
+    "sections": {
+      "features": "Features",
+      "how": "How it works",
+      "formats": "Supported formats",
+      "faq": "FAQ"
+    },
+    "hero": {
+      "eyebrow": "Arabic-first learning, powered by AI",
+      "brandStatement": "مخمخ",
+      "title": "Upload your lecture. Makhmakh makes sense of it.",
+      "subtitle": "Turn your study files — PDF, slides, audio or video — into ordered concepts, plain-language explanations and an assistant that answers from your own material, with visible sources.",
+      "primaryCta": "Get started free",
+      "secondaryCta": "See how it works",
+      "trustLine": "Everything you upload belongs to your own study space — nobody else sees or queries it.",
+      "chips": {
+        "ownCorpus": "Answers from your files",
+        "citedAnswers": "Cited answers",
+        "conceptMap": "Concept map and study order"
+      }
+    },
+    "problem": {
+      "title": "The problem we solve",
+      "body": "The lecture runs two hours, the file is thirty pages and the exam is next week. Rearranging material and hunting for one answer eats more time than actually studying.",
+      "points": [
+        "Lots of files, repeated information, no clear structure",
+        "Hard to know where to start and what depends on what",
+        "Generic tools answer in generalities instead of your syllabus"
+      ]
+    },
+    "features": {
+      "title": "What Makhmakh does for you",
+      "subtitle": "Every feature works on your actual material — no invented numbers, no filler statistics.",
+      "items": {
+        "upload": {
+          "title": "Simple file upload",
+          "body": "Accepts PDF, PowerPoint, Word and TXT plus audio and video from your lectures, and verifies the real file content rather than trusting the extension."
+        },
+        "understand": {
+          "title": "Genuine content understanding",
+          "body": "Text is split into chunks and indexed semantically, so search works on meaning instead of keyword matching."
+        },
+        "concepts": {
+          "title": "Concept map and study order",
+          "body": "Makhmakh extracts the concepts and their prerequisite links, then orders them into a study path that starts in the right place."
+        },
+        "assistant": {
+          "title": "An assistant with sources",
+          "body": "Ask anything and get an answer grounded in your course material, with the passages it relied on shown alongside."
+        },
+        "lessons": {
+          "title": "A lesson per concept",
+          "body": "Each concept gets a written explanation that can be rendered into audio and a short video you can revisit any time."
+        },
+        "progress": {
+          "title": "Track your progress",
+          "body": "Mark concepts as done and follow your completion rate inside every subject, one step at a time."
+        }
+      }
+    },
+    "how": {
+      "title": "Three steps to start",
+      "steps": {
+        "space": {
+          "title": "1 — Create your study space",
+          "body": "A private space for one subject. Yours alone, and you can create as many as you need."
+        },
+        "upload": {
+          "title": "2 — Upload your files",
+          "body": "Drag in lectures and summaries; Makhmakh processes them in the background and orders the content."
+        },
+        "learn": {
+          "title": "3 — Ask and study",
+          "body": "Walk the concept map, play a lesson, and ask the assistant at any point."
+        }
+      },
+      "cta": "Start your first space"
+    },
+    "formats": {
+      "title": "Supported file types",
+      "body": "Maximum size is 100 MB per file.",
+      "kinds": {
+        "documents": "Documents: PDF, DOCX, PPTX, PPT, TXT",
+        "audio": "Audio: MP3, WAV — transcribed to text",
+        "video": "Video: MP4, MOV"
+      }
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "subtitle": "The questions students ask most before they start with Makhmakh.",
+      "items": [
+        {
+          "q": "Who can see the files I upload?",
+          "a": "Files belong to the study space you created. Content is indexed inside that course, and the assistant only answers from the material available in the course you are studying."
+        },
+        {
+          "q": "Which formats are supported?",
+          "a": "Documents: PDF, DOCX, PPTX, PPT and TXT. Media: MP3 and WAV for audio, MP4 and MOV for video. Audio files are transcribed automatically."
+        },
+        {
+          "q": "What is the maximum file size?",
+          "a": "The default maximum is 100 MB per file, and file contents are inspected to confirm they match the declared type."
+        },
+        {
+          "q": "Where do the assistant's answers come from?",
+          "a": "From the material in the course you uploaded. The closest passages are retrieved first, then the answer is generated with its sources shown. If the material is not enough, it says so plainly instead of inventing."
+        },
+        {
+          "q": "Does it work well in Arabic?",
+          "a": "Yes. The platform is Arabic-first and the whole interface is RTL. The assistant replies in the language of your question and uses colloquial Arabic when you do."
+        },
+        {
+          "q": "Can I use it on my phone?",
+          "a": "Yes. Every screen is built responsively for phones and tablets, with touch-friendly navigation."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready to study faster?",
+      "subtitle": "Create an account, upload your first lecture and watch the concept map appear.",
+      "button": "Create your account"
+    },
+    "footer": {
+      "tagline": "An Arabic learning platform built on your own material.",
+      "product": "Product",
+      "account": "Account",
+      "note": "Makhmakh — early version under active development.",
+      "rights": "All rights reserved"
+    }
+  },
+  "auth": {
+    "aside": {
+      "title": "Organised studying that starts from your files",
+      "points": [
+        "Concepts ordered by prerequisite",
+        "An assistant that answers from your material, with sources",
+        "Audio and video lessons for every concept"
+      ]
+    },
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in and pick up where you left off.",
+      "email": "Email address",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "forgot": "Forgot your password?",
+      "noAccount": "Don't have an account yet?",
+      "createAccount": "Create one",
+      "placeholderEmail": "name@example.com",
+      "placeholderPassword": "••••••••"
+    },
+    "register": {
+      "title": "Create your Makhmakh account",
+      "subtitle": "One minute and you have your first study space.",
+      "name": "Full name",
+      "placeholderName": "e.g. Eslam Taha",
+      "email": "Email address",
+      "password": "Password",
+      "passwordHint": "At least 8 characters.",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "terms": "By creating an account you agree to use the platform for educational purposes."
+    },
+    "forgot": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we will send you a reset link.",
+      "submit": "Send reset link",
+      "submitting": "Sending…",
+      "sentTitle": "Check your inbox",
+      "sentBody": "If that email is registered, you will receive a message with a password reset link.",
+      "devTokenTitle": "Development link",
+      "devTokenBody": "This backend has no mail transport configured, so you can continue directly here:",
+      "useDevToken": "Open the reset page",
+      "backToLogin": "Back to sign in"
+    },
+    "reset": {
+      "title": "New password",
+      "subtitle": "Choose a strong password for your account.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "submit": "Set password",
+      "submitting": "Updating…",
+      "successTitle": "Password updated",
+      "successBody": "You can sign in with your new password now. All previous sessions were ended to protect your account.",
+      "missingToken": "This link is incomplete or invalid. Request a new reset link.",
+      "goToLogin": "Sign in"
+    },
+    "verify": {
+      "title": "Email verification",
+      "subtitle": "Confirming your email address…",
+      "successTitle": "Email confirmed",
+      "successBody": "Your email is verified. You have full access to the platform.",
+      "errorTitle": "Invalid link",
+      "errorBody": "The link expired or was already used. Request a new verification email from settings.",
+      "missingToken": "No verification token in the link.",
+      "goToDashboard": "Go to dashboard"
+    },
+    "errors": {
+      "invalidCredentials": "That email or password is incorrect.",
+      "emailTaken": "That email is already registered. Try signing in.",
+      "accountLocked": "The account is temporarily locked after too many attempts. Try again in 15 minutes.",
+      "accountInactive": "This account is not active. Please contact support.",
+      "rateLimited": "Too many attempts in a short time. Wait a moment and try again.",
+      "notConfigured": "A required service is not configured on the server. Check the environment settings.",
+      "generic": "Something unexpected happened. Please try again."
+    }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "email": "Enter a valid email address.",
+    "passwordMin": "Password must be at least 8 characters.",
+    "passwordMax": "Password is too long.",
+    "nameMin": "Name must be at least 2 characters.",
+    "passwordMismatch": "Passwords do not match."
+  },
+  "dashboard": {
+    "greeting": "Welcome back, {name} 👋",
+    "subtitle": "A quick look at your study spaces, files and progress.",
+    "quickActions": "Quick actions",
+    "stats": {
+      "spaces": "Study spaces",
+      "materials": "Files uploaded",
+      "concepts": "Concepts extracted",
+      "completed": "Concepts completed",
+      "conversations": "Assistant chats"
+    },
+    "actions": {
+      "newSpace": "New study space",
+      "newSpaceHint": "Create a space for a subject and start uploading",
+      "upload": "Upload a file",
+      "uploadHint": "PDF, audio or video from your lectures",
+      "chat": "Ask the assistant",
+      "chatHint": "Answers from your material, with sources"
+    },
+    "mySpaces": {
+      "title": "Your study spaces",
+      "empty": "You have not created a study space yet.",
+      "emptyCta": "Create your first space",
+      "viewAll": "View all"
+    },
+    "recentMaterials": {
+      "title": "Recent files",
+      "empty": "No files uploaded yet.",
+      "emptyCta": "Upload your first file",
+      "viewAll": "All my files"
+    },
+    "progress": {
+      "title": "Your progress",
+      "completedOf": "{completed} of {total} concepts",
+      "empty": "Progress appears here once you start completing concepts.",
+      "noConcepts": "No concepts have been extracted from your files yet."
+    },
+    "catalogTeaser": {
+      "title": "From the Makhmakh library",
+      "empty": "No published courses yet.",
+      "browse": "Browse subjects"
+    }
+  },
+  "subjects": {
+    "title": "Subjects and study spaces",
+    "subtitle": "Your own spaces for your material, plus published courses you can join.",
+    "tabs": {
+      "mine": "My spaces",
+      "catalog": "Library"
+    },
+    "mine": {
+      "empty": "You have no study spaces yet.",
+      "emptyBody": "Create a space for a subject, then upload its lectures and start learning.",
+      "cta": "New space"
+    },
+    "catalog": {
+      "empty": "No published courses right now.",
+      "emptyBody": "Courses published by instructors and the team will appear here.",
+      "enroll": "Join course",
+      "enrolling": "Joining…",
+      "enrolled": "Joined",
+      "continue": "Continue course",
+      "paid": "Paid",
+      "free": "Free",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…"
+    },
+    "create": {
+      "title": "New study space",
+      "subtitle": "Name the space after the subject, then upload your files.",
+      "name": "Space name",
+      "placeholderName": "e.g. Foundations of AI",
+      "description": "Short description",
+      "placeholderDescription": "The lectures and summaries you will upload here",
+      "submit": "Create space",
+      "submitting": "Creating…",
+      "success": "Study space created."
+    },
+    "detail": {
+      "back": "Back to subjects",
+      "yourSpace": "Your private space",
+      "published": "Published course",
+      "uploadCta": "Upload a file",
+      "chatCta": "Ask the assistant",
+      "notFound": "This course does not exist or you do not have access to it.",
+      "about": "About",
+      "noDescription": "No description for this course.",
+      "progressTitle": "Completion",
+      "progressEmpty": "Shown once you complete your first concept.",
+      "mapTitle": "Concept map",
+      "mapSubtitle": "Concepts ordered by their prerequisites.",
+      "mapEmpty": "No concepts yet. Upload a file and they will be extracted automatically.",
+      "mapBuilding": "Building the map…",
+      "mapBuild": "Build the map",
+      "readyBadge": "Ready to study",
+      "prerequisiteBadge": "Prerequisite",
+      "completedBadge": "Done",
+      "markComplete": "Mark as complete",
+      "markingComplete": "Saving…",
+      "materialsTitle": "Course files",
+      "materialsEmpty": "No files in this course yet.",
+      "conceptsCount": "{count} concepts"
+    }
+  },
+  "materials": {
+    "title": "My files",
+    "subtitle": "Everything you uploaded and how its processing is going.",
+    "empty": "You have not uploaded any files yet.",
+    "emptyBody": "Upload a lecture or a summary to get concepts and explanations.",
+    "emptyCta": "Upload a file",
+    "file": "File",
+    "space": "Space",
+    "size": "Size",
+    "uploadedAt": "Uploaded",
+    "status": "Status",
+    "actions": "Actions",
+    "unknownType": "Unknown type",
+    "openSpace": "Open space",
+    "retry": "Reprocess"
+  },
+  "upload": {
+    "title": "Upload a new file",
+    "subtitle": "Drop the file here or click to choose. Makhmakh processes it and extracts the concepts.",
+    "space": "Study space",
+    "spacePlaceholder": "Choose a space",
+    "spaceEmpty": "You have no study space yet — create one first.",
+    "spaceEmptyCta": "Create a space",
+    "dropzone": {
+      "idle": "Drop your file here",
+      "hint": "or click to choose from your device",
+      "browse": "Choose a file",
+      "replace": "Replace file",
+      "accepted": "PDF, DOCX, PPTX, PPT, TXT, MP3, WAV, MP4, MOV",
+      "sizeLimit": "Up to {size} per file"
+    },
+    "selected": "Selected file",
+    "submit": "Upload and process",
+    "submitting": "Uploading…",
+    "removeFile": "Remove",
+    "errors": {
+      "noFile": "Choose a file first.",
+      "noSpace": "Choose a study space first.",
+      "unsupported": "That file type is not supported.",
+      "tooLarge": "The file is larger than the allowed limit ({size}).",
+      "empty": "The file is empty.",
+      "signature": "The file content does not match its extension. Check the file is intact.",
+      "notFound": "That space does not exist.",
+      "forbidden": "You are not allowed to upload to that space.",
+      "queue": "The processing service is temporarily unavailable. Try again shortly."
+    },
+    "status": {
+      "title": "Processing status",
+      "pending": "Queued",
+      "processing": "Processing",
+      "completed": "Processed",
+      "failed": "Processing failed",
+      "pendingHint": "The file was received and is queued for processing.",
+      "processingHint": "Extracting text, chunking it and building the semantic index.",
+      "completedHint": "Concepts extracted — open the space to start studying.",
+      "failedHint": "Something went wrong during processing.",
+      "openSpace": "Open the space",
+      "again": "Upload another file"
+    },
+    "guide": {
+      "title": "Before you upload",
+      "document": "Text documents give the best results because the text is read directly.",
+      "audio": "Audio and video are transcribed first, so processing takes longer.",
+      "size": "Split very large files if you can, for faster processing."
+    }
+  },
+  "chat": {
+    "title": "AI assistant",
+    "subtitle": "Ask anything about the material in your study space.",
+    "space": "Space",
+    "noSpace": "You have no study space yet.",
+    "noSpaceCta": "Create a space first",
+    "emptyTitle": "Start a conversation",
+    "emptyBody": "Ask about any concept in the course and the assistant answers from your files, with sources.",
+    "placeholder": "Type your question…",
+    "send": "Send",
+    "sending": "Thinking…",
+    "stop": "Stop",
+    "newChat": "New chat",
+    "sources": "Sources",
+    "sourcesCount": "{count} sources",
+    "sourcesToggle": "Show sources",
+    "sourcesHide": "Hide sources",
+    "sourceFrom": "From: {name}",
+    "matchScore": "Match score",
+    "assistantName": "Makhmakh",
+    "youName": "You",
+    "errorTitle": "Could not get a reply",
+    "notConfigured": "The assistant is not enabled on this server (AI credentials are not configured).",
+    "noContent": "There is not enough material in this course to answer that. Try uploading more files.",
+    "clear": "Clear conversation",
+    "suggestions": {
+      "title": "Try asking",
+      "items": [
+        "Summarise the key points of the first file",
+        "Explain the first concept in simple terms",
+        "What is the difference between the first two concepts?",
+        "Make revision questions for this course"
+      ]
+    },
+    "history": {
+      "title": "Previous conversations",
+      "empty": "No saved conversations.",
+      "load": "Open",
+      "messages": "{count} messages"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Your account, security and preferences.",
+    "tabs": {
+      "profile": "Profile",
+      "security": "Security",
+      "sessions": "Sessions"
+    },
+    "profile": {
+      "title": "Profile",
+      "name": "Name",
+      "email": "Email",
+      "role": "Account type",
+      "joinedAt": "Member since",
+      "emailUnverified": "Email not verified yet.",
+      "verifyCta": "Verify email",
+      "verifying": "Verifying…",
+      "verified": "Email verified",
+      "preferences": "Preferences",
+      "languageLabel": "Interface language",
+      "languageHint": "Applies immediately and is remembered in this browser.",
+      "readOnlyHint": "Contact support to change your email address."
+    },
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "submitting": "Changing…",
+      "success": "Password changed. Other sessions were signed out to protect your account.",
+      "wrongCurrent": "Your current password is incorrect."
+    },
+    "mfa": {
+      "title": "Two-factor authentication",
+      "body": "Add an authenticator app as a second factor. Required for administrator accounts.",
+      "enable": "Enable two-factor",
+      "setup": "Preparing…",
+      "scanHint": "Add this secret to your authenticator app, then enter the 6-digit code.",
+      "secretLabel": "Secret key",
+      "codeLabel": "Verification code",
+      "placeholderCode": "123456",
+      "confirm": "Confirm code",
+      "confirming": "Verifying…",
+      "enabled": "Two-factor authentication is enabled on your account.",
+      "invalidCode": "That code is incorrect. Try a fresh one.",
+      "unavailable": "Two-factor authentication is not available on this server."
+    },
+    "sessions": {
+      "title": "Active sessions",
+      "body": "Every device signed in to your account.",
+      "empty": "No active sessions.",
+      "device": "Device",
+      "ip": "IP address",
+      "started": "Started",
+      "expires": "Expires",
+      "revoke": "End",
+      "revoking": "Ending…",
+      "revokeAll": "End all sessions",
+      "revokeAllHint": "You will be signed out everywhere.",
+      "revoked": "Session ended.",
+      "revokedAll": "All sessions ended.",
+      "unknownDevice": "Unknown device"
+    },
+    "danger": {
+      "title": "Sign out",
+      "body": "End the session on this device.",
+      "logout": "Sign out"
+    }
+  },
+  "status": {
+    "pending": "Queued",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "roles": {
+    "student": "Student",
+    "instructor": "Instructor",
+    "content_creator": "Content creator",
+    "support": "Support",
+    "admin": "Administrator",
+    "super_admin": "Super administrator"
+  },
+  "empty": {
+    "title": "Nothing here yet",
+    "body": "There is no data to show yet."
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The link you opened does not exist or has moved.",
+    "notFoundCta": "Back to home",
+    "genericTitle": "Could not load data",
+    "genericBody": "Try refreshing the page or again in a moment.",
+    "unauthorizedTitle": "Sign in required",
+    "unauthorizedBody": "Sign in to access this page."
+  }
+}
