@@ -1,11 +1,12 @@
 import hashlib
 import json
 
+from app.ai.ai_gateway.ai_gateway import ai_gateway_execute
 from app.ai.script_generator import generate_lesson_script
+from app.schemas.slide_plan import normalize_legacy_script
 from app.services.slide_generator import create_slides
 from app.services.tts import generate_audio_placeholder
 from app.services.video_renderer import render_video
-from app.schemas.slide_plan import normalize_legacy_script
 
 
 def compute_content_hash(
@@ -28,10 +29,25 @@ def generate_lesson(
     concept_name: str,
     concept_description: str,
 ):
-    script = generate_lesson_script(
-        concept_name=concept_name,
-        concept_description=concept_description,
-    )
+    try:
+        script = generate_lesson_script(
+            concept_name=concept_name,
+            concept_description=concept_description,
+        )
+    except Exception:
+        prompt = f"""
+Write an educational lesson script for:
+Concept: {concept_name}
+Description: {concept_description}
+
+Provide a structured lesson plan with slide titles and narrations.
+        """.strip()
+
+        raw_script = ai_gateway_execute(
+            task_type="video_script",
+            prompt=prompt,
+        )
+        script = {"raw_text": raw_script}
 
     teaching_script = normalize_legacy_script(script, lesson_id)
 
@@ -56,7 +72,6 @@ def generate_lesson(
         lesson_id=lesson_id,
     )
 
-    # 4. Render video
     video = render_video(
         slide_paths=slides,
         audio_path=audio,

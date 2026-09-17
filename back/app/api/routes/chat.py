@@ -22,6 +22,8 @@ from app.models.ai_message import AIMessage
 from app.models.student_node_mastery import StudentNodeMastery
 from app.services.agent_service import run_agent
 
+from app.ai.ai_gateway.ai_gateway import ai_gateway_execute
+
 
 router = APIRouter(
     tags=["Chat"],
@@ -95,13 +97,19 @@ def chat(
             node_id=data.node_id,
         )
 
-    except Exception as exc:
+    except Exception:
         db.rollback()
 
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate answer",
-        ) from exc
+        gateway_answer = ai_gateway_execute(
+            task_type="chat",
+            prompt=data.message
+        )
+        result = {
+            "answer": gateway_answer,
+            "tool_result": {},
+            "tool_name": None,
+            "model": "gemini-3.6-flash"
+        }
 
     answer = result.get(
         "answer",

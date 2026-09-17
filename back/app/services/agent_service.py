@@ -5,8 +5,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.ai.agent import plan_tool
-from app.ai.ollama_client import generate_text
-from app.core.config import get_settings
+from app.ai.ai_gateway.ai_gateway import ai_gateway_execute
 from app.services.tools.agent_tools import (
     search_course_content,
     get_student_progress,
@@ -116,24 +115,13 @@ TOOL RESULT:
 Return only the final answer for the student.
 """
 
-    answer = generate_text(
-        prompt=final_prompt,
-        system=(
-            "You are a grounded educational assistant. "
-            "Never invent facts outside the provided tool result."
-        ),
+    answer = ai_gateway_execute(
+        task_type="chat",
+        prompt=final_prompt
     )
 
     latency_ms = int(
         (time.perf_counter() - started_at) * 1000
-    )
-
-    settings = get_settings()
-
-    model_name = getattr(
-        settings,
-        "ollama_model",
-        "unknown",
     )
 
     return {
@@ -141,5 +129,5 @@ Return only the final answer for the student.
         "tool_name": tool_name,
         "tool_result": tool_result,
         "latency_ms": latency_ms,
-        "model": model_name,
+        "model": "gemini-3.6-flash",
     }

@@ -1,6 +1,6 @@
 from sqlalchemy import select
 
-from app.ai.ollama_client import generate_text
+from app.ai.ai_gateway.ai_gateway import ai_gateway_execute
 from app.ai.rag_prompt import (
     SYSTEM_PROMPT,
     build_rag_prompt,
@@ -189,9 +189,11 @@ CONTENT:
         context=context,
     )
 
-    answer = generate_text(
-        prompt=prompt,
-        system=SYSTEM_PROMPT,
+    full_prompt = f"{SYSTEM_PROMPT}\n\n{prompt}"
+
+    answer = ai_gateway_execute(
+        task_type="document_understanding",
+        prompt=full_prompt,
     )
 
     sources = [
