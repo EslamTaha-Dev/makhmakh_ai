@@ -1,0 +1,20 @@
+services:
+  postgres:
+    restart: always
+    ports: []
+
+  redis:
+    restart: always
+    ports: []
+
+  api:
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+
+  arq-worker:
+    restart: always
+    env_file:
+      - .env
