@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Slide, speech, and video asset generation for the optional media worker.
+kokoro==0.9.4
+numpy==2.4.6
+pillow==12.3.0
+soundfile==0.14.0

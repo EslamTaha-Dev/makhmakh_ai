@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Optional alternative to the default Gemini embedding provider.
+sentence-transformers==6.0.1

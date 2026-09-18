@@ -4,19 +4,17 @@ from app.services.payment_reconciliation import start_payment_reconciliation
 from app.services.queue import (
     payment_queue,
     email_queue,
-    processing_queue,
     redis_connection,
-    video_queue,
 )
+from app.services.token_cleanup import start_token_cleanup
 
 
 if __name__ == "__main__":
     start_payment_reconciliation()
+    start_token_cleanup()
 
     worker = SimpleWorker(
         [
-            processing_queue,
-            video_queue,
             payment_queue,
             email_queue,
         ],

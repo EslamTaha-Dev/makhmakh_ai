@@ -1,0 +1,6 @@
+-r requirements-material.txt
+-r requirements-video.txt
+-r requirements-local-embeddings.txt
+
+pytest==9.1.1
+pytest-asyncio==1.4.0

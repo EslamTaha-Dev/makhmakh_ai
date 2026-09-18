@@ -1,9 +1,8 @@
 """Job queues.
 
-Production runs the RQ workers defined in ``docker-compose.yml``. When Redis is not
-reachable the helper below runs the job in a background thread instead, so an
-uploaded material is still processed and the API does not fail the request just
-because the worker fleet is absent (local development, single-container deploys).
+Production runs the focused RQ workers defined in ``docker-compose.yml``. Inline
+execution is available explicitly for single-container deployments through the
+``RUN_JOBS_INLINE`` setting; queue failures are otherwise surfaced to the caller.
 """
 
 import importlib
@@ -76,8 +75,8 @@ def enqueue_job(
 ) -> Any | None:
     """Enqueue a job, falling back to an in-process background thread.
 
-    Returns the RQ job when the queue accepted it, or ``None`` when the job was
-    executed inline because the queue was unavailable.
+    Returns the RQ job when the queue accepted it, or ``None`` when explicit inline
+    execution is enabled.
     """
 
     if settings.run_jobs_inline:
@@ -86,14 +85,13 @@ def enqueue_job(
     try:
         return queue.enqueue(target, *args, **kwargs)
     except Exception as exc:  # redis/rq connection failures
-        logger.warning(
-            "Job queue '%s' is unavailable (%s). Running %s inline instead.",
+        logger.exception(
+            "Job queue '%s' is unavailable while enqueueing %s: %s",
             queue.name,
-            exc,
             target if isinstance(target, str) else getattr(target, "__name__", target),
+            exc,
         )
-
-        return _run_inline(target, *args, **kwargs)
+        raise
 
 
 def _run_inline(

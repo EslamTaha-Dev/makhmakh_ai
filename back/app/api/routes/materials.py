@@ -26,7 +26,6 @@ from app.models.material import Material
 from app.models.processing_job import ProcessingJob
 from app.models.user import User
 from app.schemas.material import MaterialResponse
-from app.services.material_processor import process_material
 from app.services.queue import enqueue_job, processing_queue
 
 
@@ -301,7 +300,7 @@ def upload_material(
 
         enqueue_job(
             processing_queue,
-            process_material,
+            "app.services.material_processor.process_material",
             str(material_id),
         )
 

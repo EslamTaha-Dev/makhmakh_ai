@@ -1,5 +1,6 @@
 ﻿from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -16,13 +17,12 @@ class Settings(BaseSettings):
     database_url: str
 
     redis_url: str = "redis://localhost:6379/0"
-    arq_redis_url: str = "redis://localhost:6379/2"
     run_jobs_inline: bool = False
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:1.5b"
+    embedding_provider: Literal["gemini", "sentence-transformers"] = "gemini"
     active_embedding_model: str = "intfloat/multilingual-e5-small"
-    active_embedding_dimension: int = Field(default=384, ge=1, le=4096)
 
     jwt_secret_key: str
 

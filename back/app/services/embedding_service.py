@@ -1,8 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.ai.embeddings import (
     embed_texts,
-    fallback_was_activated,
     get_embedding_metadata,
 )
 from app.db.session import SessionLocal
@@ -13,8 +12,16 @@ def generate_missing_embeddings() -> int:
     db = SessionLocal()
 
     try:
+        embedding_model, embedding_dimension = get_embedding_metadata()
+
         chunks = db.scalars(
-            select(ContentChunk).where(ContentChunk.embedding.is_(None))
+            select(ContentChunk).where(
+                or_(
+                    ContentChunk.embedding.is_(None),
+                    ContentChunk.embedding_model != embedding_model,
+                    ContentChunk.embedding_dimension != embedding_dimension,
+                )
+            )
         ).all()
 
         if not chunks:
@@ -23,13 +30,6 @@ def generate_missing_embeddings() -> int:
         texts = [chunk.chunk_text for chunk in chunks]
 
         embeddings = embed_texts(texts)
-
-        if fallback_was_activated():
-            chunks = db.scalars(select(ContentChunk)).all()
-            texts = [chunk.chunk_text for chunk in chunks]
-            embeddings = embed_texts(texts)
-
-        embedding_model, embedding_dimension = get_embedding_metadata()
 
         for chunk, embedding in zip(
             chunks,
