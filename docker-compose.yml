@@ -34,6 +34,21 @@ services:
       timeout: 3s
       retries: 10
 
+  migrate:
+    build:
+      <<: *backend-build
+      target: api
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && python -m app.db.seed_roles
+    environment:
+      <<: *backend-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   frontend:
     build:
       context: ./front
@@ -46,7 +61,8 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: 3000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "3000:3000"
 
@@ -62,10 +78,20 @@ services:
       - uploads:/app/uploads
       - generated:/app/generated
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live', timeout=2)"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
     ports:
       - "8000:8000"
 
@@ -84,8 +110,8 @@ services:
     volumes:
       - uploads:/app/uploads
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -99,8 +125,8 @@ services:
     volumes:
       - generated:/app/generated
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -112,8 +138,8 @@ services:
     environment:
       <<: *backend-environment
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 

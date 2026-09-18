@@ -31,12 +31,9 @@ This brings up the frontend on `http://localhost:3000`, Postgres (with `pgvector
 Redis, the API on `http://localhost:8000`, the workers that process uploaded
 material and lightweight scheduled jobs. Video generation is optional because its
 local speech stack is large; enable
-it with `docker compose --profile media up --build`. Apply migrations once the
-stack is healthy:
-
-```bash
-docker compose exec api alembic upgrade head
-```
+it with `docker compose --profile media up --build`. Before the API and workers
+start, the one-shot `migrate` service applies all Alembic migrations and seeds the
+canonical roles, including the default `student` role.
 
 ### Backend manually
 
