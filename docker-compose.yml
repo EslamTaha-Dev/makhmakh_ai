@@ -1,5 +1,15 @@
-x-backend-image: &backend-image
-  image: makhmakh-backend:local
+x-backend-build: &backend-build
+  context: ./back
+  dockerfile: Dockerfile
+
+x-backend-environment: &backend-environment
+  DATABASE_URL: postgresql+psycopg://postgres:Postgres123!@postgres:5432/bosla
+  REDIS_URL: redis://redis:6379/0
+  JWT_SECRET_KEY: change-this-in-local-env
+  AI_GATEWAY_PROVIDER: ${AI_GATEWAY_PROVIDER:-gemini}
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+  GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
 
 services:
   postgres:
@@ -24,19 +34,33 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
-    <<: *backend-image
+  frontend:
     build:
-      context: ./back
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+        NEXT_PUBLIC_UPLOAD_MAX_SIZE_MB: ${NEXT_PUBLIC_UPLOAD_MAX_SIZE_MB:-100}
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:Postgres123!@postgres:5432/bosla
-      REDIS_URL: redis://redis:6379/0
-      ARQ_REDIS_URL: redis://redis:6379/2
-      JWT_SECRET_KEY: change-this-in-local-env
-      FRONTEND_URL: http://localhost:3000
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+  api:
+    build:
+      <<: *backend-build
+      target: api
+    environment:
+      <<: *backend-environment
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     volumes:
       # The worker fleet reads the same uploads directory as the API.
       - uploads:/app/uploads
+      - generated:/app/generated
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,22 +69,18 @@ services:
     ports:
       - "8000:8000"
 
-  rq-worker:
-    <<: *backend-image
+  material-worker:
+    build:
+      <<: *backend-build
+      target: material-worker
     command:
       - rq
       - worker
       - material_processing
-      - video_generation
-      - payment_processing
-      - email_delivery
       - --url
       - redis://redis:6379/0
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:Postgres123!@postgres:5432/bosla
-      REDIS_URL: redis://redis:6379/0
-      ARQ_REDIS_URL: redis://redis:6379/2
-      JWT_SECRET_KEY: change-this-in-local-env
+      <<: *backend-environment
     volumes:
       - uploads:/app/uploads
     depends_on:
@@ -69,14 +89,28 @@ services:
       redis:
         condition: service_healthy
 
-  arq-worker:
-    <<: *backend-image
-    command: ["arq", "arq_worker.WorkerSettings"]
+  video-worker:
+    profiles: ["media"]
+    build:
+      <<: *backend-build
+      target: video-worker
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:Postgres123!@postgres:5432/bosla
-      REDIS_URL: redis://redis:6379/0
-      ARQ_REDIS_URL: redis://redis:6379/2
-      JWT_SECRET_KEY: change-this-in-local-env
+      <<: *backend-environment
+    volumes:
+      - generated:/app/generated
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  task-worker:
+    build:
+      <<: *backend-build
+      target: api
+    command: ["python", "-m", "app.worker"]
+    environment:
+      <<: *backend-environment
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,4 +119,5 @@ services:
 
 volumes:
   uploads:
+  generated:
   pgdata:

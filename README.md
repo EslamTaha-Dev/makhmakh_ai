@@ -15,7 +15,7 @@ content with citations.
 | --- | --- |
 | `back/` | FastAPI + SQLAlchemy 2 + Alembic backend (PostgreSQL + pgvector, Redis) |
 | `front/` | Next.js 16 App Router frontend (Arabic RTL + English) |
-| `docker-compose.yml` | Postgres (pgvector), Redis, API, RQ workers, ARQ cron worker |
+| `docker-compose.yml` | Frontend, Postgres (pgvector), Redis, API, and focused RQ workers |
 
 ---
 
@@ -27,9 +27,12 @@ content with citations.
 docker compose up --build
 ```
 
-This brings up Postgres (with `pgvector`), Redis, the API on `http://localhost:8000`,
-the RQ workers that process uploaded material, and the ARQ worker that runs the
-scheduled jobs. Apply migrations once the stack is healthy:
+This brings up the frontend on `http://localhost:3000`, Postgres (with `pgvector`),
+Redis, the API on `http://localhost:8000`, the workers that process uploaded
+material and lightweight scheduled jobs. Video generation is optional because its
+local speech stack is large; enable
+it with `docker compose --profile media up --build`. Apply migrations once the
+stack is healthy:
 
 ```bash
 docker compose exec api alembic upgrade head
@@ -40,21 +43,28 @@ docker compose exec api alembic upgrade head
 ```bash
 cd back
 python -m venv .venv && . .venv/Scripts/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+pip install uv
+uv pip install -r requirements-dev.txt
 cp .env.example .env                                  # then fill in the secrets
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
-Queues are optional in development: when Redis is unreachable the API runs the job
-in a background thread instead of failing the request, so uploads still get processed.
+For an API-only environment, install `requirements.txt`. Material processing,
+video generation, local embeddings, and test tooling have separate requirement
+files so production images only carry the features they run. Gemini embeddings
+are the default; local embeddings require `requirements-local-embeddings.txt`
+and `EMBEDDING_PROVIDER=sentence-transformers`.
+
+Queues are optional in development when `RUN_JOBS_INLINE=true`; otherwise queue
+connection failures are returned instead of attempting heavy worker jobs in the
+lightweight API process.
 
 Worker processes (when Redis is available):
 
 ```bash
-rq worker material_processing video_generation payment_processing email_delivery \
-  --url redis://localhost:6379/0        # content processing
-arq arq_worker.WorkerSettings           # scheduled jobs (payments, token cleanup)
+rq worker material_processing --url redis://localhost:6379/0
+python -m app.worker                    # payments, email, and scheduled cleanup
 ```
 
 ### Frontend
