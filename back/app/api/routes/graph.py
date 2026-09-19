@@ -29,10 +29,16 @@ def build_graph(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    return build_course_graph(
-        db=db,
-        course_id=course_id,
-    )
+    try:
+        return build_course_graph(
+            db=db,
+            course_id=course_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/{course_id}/graph")

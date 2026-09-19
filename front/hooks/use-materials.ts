@@ -73,6 +73,9 @@ export function useMaterialProcessing(materialId: string | null) {
     void queryClient.invalidateQueries({ queryKey: ["graph"] });
     if (query.data?.course_id) {
       void queryClient.invalidateQueries({
+        queryKey: queryKeys.courseConcepts(query.data.course_id),
+      });
+      void queryClient.invalidateQueries({
         queryKey: queryKeys.courseMaterials(query.data.course_id),
       });
     }

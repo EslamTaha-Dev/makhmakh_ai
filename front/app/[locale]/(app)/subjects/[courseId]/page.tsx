@@ -259,7 +259,9 @@ export default function CourseDetailPage() {
             </p>
           </div>
 
-          {!conceptList.length && graph.data && graph.data.nodes.length === 0 ? (
+          {conceptList.length > 0 &&
+          graph.data &&
+          graph.data.nodes.length === 0 ? (
             <Button
               variant="outline"
               size="sm"

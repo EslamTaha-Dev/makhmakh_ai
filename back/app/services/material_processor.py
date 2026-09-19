@@ -13,6 +13,7 @@ from app.services.concept_pipeline import extract_course_concepts
 from app.services.embedding_service import generate_missing_embeddings
 from app.services.extractor import extract_document
 from app.services.graph import topological_sort
+from app.services.graph_builder import build_course_graph
 from app.services.transcription import transcribe_audio
 
 
@@ -183,6 +184,11 @@ def process_material(material_id: str):
 
         if not isinstance(prerequisites_data, list):
             prerequisites_data = []
+
+        if not concepts_data:
+            raise ValueError(
+                "No concepts could be extracted from the material."
+            )
 
         ordered_names, safe_edges = topological_sort(
             concepts_data,
@@ -356,10 +362,20 @@ def process_material(material_id: str):
         job.completed_at = datetime.now(timezone.utc)
         job.error_message = None
 
+        graph_result = build_course_graph(
+            db=db,
+            course_id=material.course_id,
+        )
+
         db.commit()
 
         print(
             f"Material processing completed: {material.id}"
+        )
+        print(
+            "Knowledge graph updated: "
+            f"{graph_result['nodes_created']} nodes, "
+            f"{graph_result['edges_created']} edges"
         )
 
     except Exception as exc:

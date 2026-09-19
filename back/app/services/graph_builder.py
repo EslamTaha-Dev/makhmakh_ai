@@ -12,10 +12,13 @@ from app.services.graph import topological_order
 
 def make_node_id(course_id: str, concept_name: str) -> str:
     slug = re.sub(
-        r"[^a-zA-Z0-9]+",
+        r"[^\w]+",
         "_",
-        concept_name.strip().lower(),
+        concept_name.strip().casefold(),
     ).strip("_")
+
+    if not slug:
+        raise ValueError("Concept name cannot produce a graph node ID.")
 
     return f"{course_id}_{slug}"
 
@@ -32,10 +35,9 @@ def build_course_graph(
     ).all()
 
     if not concepts:
-        return {
-            "nodes_created": 0,
-            "edges_created": 0,
-        }
+        raise ValueError(
+            "No concepts are available yet. Process a course material first."
+        )
 
     concept_to_node = {}
 
