@@ -27,6 +27,9 @@ content with citations.
 docker compose up --build
 ```
 
+Compose loads backend settings and secrets from `back/.env` automatically.
+Copy `back/.env.example` first when setting up a new checkout.
+
 This brings up the frontend on `http://localhost:3000`, Postgres (with `pgvector`),
 Redis, the API on `http://localhost:8000`, the workers that process uploaded
 material. Video generation is optional because its local speech stack is large; enable
