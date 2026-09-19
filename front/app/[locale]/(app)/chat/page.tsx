@@ -21,7 +21,8 @@ import {
 } from "@/hooks/use-chat";
 import { useMyCourses } from "@/hooks/use-courses";
 import { useQueryParam } from "@/hooks/use-query-param";
-import type { ConversationSummary } from "@/lib/api/types";
+import { ApiError } from "@/lib/api/client";
+import type { ChatFailureResponse, ConversationSummary } from "@/lib/api/types";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,15 @@ function newId(): string {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getSessionIdFromError(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  if (!error.payload || typeof error.payload !== "object") return null;
+
+  const detail = (error.payload as Partial<ChatFailureResponse>).detail;
+  const sessionId = detail?.session_id;
+  return typeof sessionId === "string" && sessionId ? sessionId : null;
 }
 
 export default function ChatPage() {
@@ -109,6 +119,12 @@ export default function ChatPage() {
         },
       ]);
     } catch (error) {
+      const failedSessionId = getSessionIdFromError(error);
+
+      if (failedSessionId) {
+        setSessionId(failedSessionId);
+      }
+
       setTurns((previous) => [
         ...previous,
         {

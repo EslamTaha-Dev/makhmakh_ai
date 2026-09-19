@@ -71,6 +71,13 @@ export type ChatResponse = {
   sources: ChatSource[];
 };
 
+export type ChatFailureResponse = {
+  detail: {
+    message: string;
+    session_id: string;
+  };
+};
+
 export type ChatMessage = {
   id: string;
   session_id: string;

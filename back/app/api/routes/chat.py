@@ -12,6 +12,7 @@ from app.models.chat import ChatMessage, ChatSession
 from app.models.course import Course
 from app.models.user import User
 from app.schemas.chat import (
+    ChatFailureResponse,
     ChatMessageResponse,
     ChatRequest,
     ChatResponse,
@@ -33,10 +34,26 @@ router = APIRouter(
 )
 
 
+def _ai_unavailable(session_id: uuid.UUID) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "message": "The AI assistant is not available right now.",
+            "session_id": str(session_id),
+        },
+    )
+
+
 @limiter.limit("20/minute")
 @router.post(
     "/courses/{course_id}/chat",
     response_model=ChatResponse,
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": ChatFailureResponse,
+            "description": "AI failed; the user turn remains in this session.",
+        }
+    },
 )
 def chat(
     request: Request,
@@ -87,7 +104,7 @@ def chat(
     )
 
     db.add(user_message)
-    db.flush()
+    db.commit()
 
     try:
         result = run_agent(
@@ -100,11 +117,7 @@ def chat(
 
     except AIGatewayError as exc:
         db.rollback()
-
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="The AI assistant is not available right now.",
-        ) from exc
+        raise _ai_unavailable(session_id) from exc
 
     except Exception:
         db.rollback()
@@ -115,10 +128,7 @@ def chat(
                 prompt=data.message,
             )
         except AIGatewayError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="The AI assistant is not available right now.",
-            ) from exc
+            raise _ai_unavailable(session_id) from exc
 
         result = {
             "answer": gateway_answer,

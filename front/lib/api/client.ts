@@ -74,6 +74,14 @@ function extractMessage(payload: unknown, status: number): string {
       return detail;
     }
 
+    if (detail && typeof detail === "object") {
+      const message = (detail as { message?: unknown }).message;
+
+      if (typeof message === "string" && message.trim()) {
+        return message;
+      }
+    }
+
     if (Array.isArray(detail)) {
       const messages = detail
         .map((item) => {
