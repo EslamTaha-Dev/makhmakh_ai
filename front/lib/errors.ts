@@ -19,12 +19,23 @@ function matches(detail: string, markers: string[]): boolean {
   return markers.some((marker) => lower.includes(marker));
 }
 
+function getErrorCode(error: ApiError): string | null {
+  if (!error.payload || typeof error.payload !== "object") return null;
+
+  const detail = (error.payload as { detail?: unknown }).detail;
+  if (!detail || typeof detail !== "object") return null;
+
+  const code = (detail as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
 export function describeApiError(
   error: unknown,
   context: ErrorContext = "generic",
 ): ApiErrorDescription {
   if (error instanceof ApiError) {
     const detail = error.message ?? "";
+    const errorCode = getErrorCode(error);
 
     if (error.status === 0) {
       return { kind: "key", key: "common.offlineHint" };
@@ -78,9 +89,26 @@ export function describeApiError(
       return { kind: "key", key: "auth.errors.rateLimited" };
     }
 
+    if ((error.status === 502 || error.status === 503) && context === "chat") {
+      const chatErrorKeys: Record<string, string> = {
+        AI_NOT_CONFIGURED: "chat.notConfigured",
+        AI_CREDENTIAL_REJECTED: "chat.credentialRejected",
+        AI_RATE_LIMITED: "chat.rateLimited",
+        AI_PROVIDER_UNREACHABLE: "chat.providerUnreachable",
+        AI_PROVIDER_CREDITS: "chat.providerCredits",
+        AI_PROVIDER_ERROR: "chat.providerError",
+        AI_PROVIDER_UNAVAILABLE: "chat.providerUnreachable",
+      };
+
+      return {
+        kind: "key",
+        key: (errorCode && chatErrorKeys[errorCode]) || "chat.providerError",
+      };
+    }
+
     if (error.status === 503) {
-      if (context === "chat" || matches(detail, ["ai", "assistant"])) {
-        return { kind: "key", key: "chat.notConfigured" };
+      if (matches(detail, ["ai", "assistant"])) {
+        return { kind: "key", key: "chat.providerUnreachable" };
       }
 
       if (context === "upload" || matches(detail, ["queue"])) {

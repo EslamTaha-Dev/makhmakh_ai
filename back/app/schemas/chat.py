@@ -32,6 +32,7 @@ class ChatResponse(BaseModel):
 
 
 class ChatFailureDetail(BaseModel):
+    code: str
     message: str
     session_id: uuid.UUID
 

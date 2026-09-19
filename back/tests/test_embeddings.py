@@ -12,7 +12,6 @@ def settings(**overrides):
         "embedding_api_key": "embedding-token",
         "embedding_model": "provider/embedding-model",
         "local_embedding_model": "intfloat/multilingual-e5-small",
-        "mock_ai": False,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -96,37 +95,6 @@ def test_embedding_dimension_must_match_pgvector(monkeypatch):
 
     with pytest.raises(RuntimeError, match="required 384 dimensions"):
         embeddings.embed_text("hello")
-
-
-def test_mock_embeddings_remain_deterministic(monkeypatch):
-    monkeypatch.setattr(
-        embeddings,
-        "get_settings",
-        lambda: settings(mock_ai=True),
-    )
-
-    first = embeddings.embed_text("hello")
-    second = embeddings.embed_text("hello")
-
-    assert first == second
-    assert len(first) == embeddings.EMBEDDING_DIMENSION
-    assert embeddings.get_embedding_metadata() == (
-        "provider/embedding-model",
-        embeddings.EMBEDDING_DIMENSION,
-    )
-
-
-def test_mock_embedding_metadata_does_not_require_a_model(monkeypatch):
-    monkeypatch.setattr(
-        embeddings,
-        "get_settings",
-        lambda: settings(mock_ai=True, embedding_model=""),
-    )
-
-    assert embeddings.get_embedding_metadata() == (
-        "mock",
-        embeddings.EMBEDDING_DIMENSION,
-    )
 
 
 def test_empty_embedding_batch_does_not_call_provider(monkeypatch):

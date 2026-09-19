@@ -1,4 +1,3 @@
-import hashlib
 from functools import lru_cache
 
 from app.ai.ai_gateway.ai_gateway import (
@@ -27,9 +26,6 @@ def get_embedding_model():
 def get_embedding_metadata() -> tuple[str, int]:
     settings = get_settings()
 
-    if settings.mock_ai and not settings.embedding_model.strip():
-        return "mock", EMBEDDING_DIMENSION
-
     if settings.embedding_provider == OPENAI_COMPATIBLE_PROVIDER:
         model = _required(settings.embedding_model, "EMBEDDING_MODEL")
         return model, EMBEDDING_DIMENSION
@@ -40,18 +36,6 @@ def get_embedding_metadata() -> tuple[str, int]:
     raise ValueError(
         f"Unsupported embedding provider: {settings.embedding_provider}"
     )
-
-
-def _mock_embedding(text: str) -> list[float]:
-    values = []
-    seed = text.encode("utf-8")
-
-    for index in range(EMBEDDING_DIMENSION):
-        digest = hashlib.sha256(seed + index.to_bytes(4, "big")).digest()
-        values.append((int.from_bytes(digest[:4], "big") / 2**31) - 1)
-
-    magnitude = sum(value * value for value in values) ** 0.5
-    return [value / magnitude for value in values]
 
 
 def _required(value: str, env_var: str) -> str:
@@ -99,9 +83,6 @@ def _embed(texts: list[str]) -> list[list[float]]:
         return []
 
     settings = get_settings()
-
-    if settings.mock_ai:
-        return [_mock_embedding(text) for text in texts]
 
     if settings.embedding_provider == OPENAI_COMPATIBLE_PROVIDER:
         return _remote_embeddings(texts)

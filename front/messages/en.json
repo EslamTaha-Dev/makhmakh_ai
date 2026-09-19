@@ -421,6 +421,11 @@
     "youName": "You",
     "errorTitle": "Could not get a reply",
     "notConfigured": "The assistant is not enabled on this server (AI credentials are not configured).",
+    "credentialRejected": "The AI provider rejected the configured API key. Check the server credentials.",
+    "rateLimited": "The AI provider is receiving too many requests. Wait a moment and try again.",
+    "providerUnreachable": "The AI provider could not be reached. Check the connection and try again.",
+    "providerCredits": "The AI provider account does not have enough credits for this request.",
+    "providerError": "The AI provider rejected the request. Check the provider configuration and try again.",
     "noContent": "There is not enough material in this course to answer that. Try uploading more files.",
     "clear": "Clear conversation",
     "suggestions": {

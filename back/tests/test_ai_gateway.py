@@ -10,7 +10,7 @@ def settings(**overrides):
         "llm_base_url": "https://router.example/v1",
         "llm_api_key": "single-token",
         "llm_model": "provider/model",
-        "mock_ai": False,
+        "llm_max_tokens": 4096,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -43,8 +43,14 @@ def test_execute_calls_chat_completions_once(monkeypatch):
     monkeypatch.setattr(ai_gateway, "get_settings", settings)
     calls = []
 
-    def fake_call_llm(base_url, api_key, model, prompt):  # noqa: ANN001
-        calls.append((base_url, api_key, model, prompt))
+    def fake_call_llm(  # noqa: ANN001
+        base_url,
+        api_key,
+        model,
+        prompt,
+        max_tokens,
+    ):
+        calls.append((base_url, api_key, model, prompt, max_tokens))
         return "answer"
 
     monkeypatch.setattr(ai_gateway, "_call_llm", fake_call_llm)
@@ -58,6 +64,7 @@ def test_execute_calls_chat_completions_once(monkeypatch):
             "single-token",
             "provider/model",
             "hello",
+            4096,
         )
     ]
 
@@ -109,12 +116,14 @@ def test_call_llm_uses_standard_chat_completion_shape(monkeypatch):
         "single-token",
         "provider/model",
         "hello",
+        2048,
     )
 
     assert result == "portable answer"
     assert captured == {
         "model": "provider/model",
         "messages": [{"role": "user", "content": "hello"}],
+        "max_tokens": 2048,
     }
 
 
@@ -137,7 +146,13 @@ def test_empty_completion_is_a_gateway_failure(monkeypatch, content):
     )
 
     with pytest.raises(ai_gateway.AIGatewayFailed, match="empty response"):
-        ai_gateway._call_llm("https://router.example/v1", "token", "model", "hi")
+        ai_gateway._call_llm(
+            "https://router.example/v1",
+            "token",
+            "model",
+            "hi",
+            4096,
+        )
 
 
 def test_authentication_error_is_unavailable(monkeypatch):
@@ -192,17 +207,21 @@ def test_status_error_is_gateway_failure(monkeypatch):
         ai_gateway.ai_gateway_execute("chat", "hello")
 
 
-def test_mock_mode_does_not_require_configuration(monkeypatch):
+def test_payment_required_reports_provider_credits(monkeypatch):
+    class FakeStatusError(Exception):
+        status_code = 402
+        body = {"error": {"message": "More credits required"}}
+
+    monkeypatch.setattr(ai_gateway, "get_settings", settings)
+    monkeypatch.setattr(ai_gateway, "APIStatusError", FakeStatusError)
     monkeypatch.setattr(
         ai_gateway,
-        "get_settings",
-        lambda: settings(
-            llm_base_url="",
-            llm_api_key="",
-            llm_model="",
-            mock_ai=True,
-        ),
+        "_call_llm",
+        lambda **kwargs: (_ for _ in ()).throw(FakeStatusError()),
     )
 
-    assert ai_gateway.ai_gateway_execute("chat", "hello").startswith("[mock:chat]")
-    assert ai_gateway.get_configured_llm_model() == "mock"
+    with pytest.raises(ai_gateway.AIGatewayUnavailable) as error:
+        ai_gateway.ai_gateway_execute("chat", "hello")
+
+    assert error.value.error_code == "AI_PROVIDER_CREDITS"
+    assert error.value.http_status_code == 503

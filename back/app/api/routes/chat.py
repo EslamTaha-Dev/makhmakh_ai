@@ -34,11 +34,15 @@ router = APIRouter(
 )
 
 
-def _ai_unavailable(session_id: uuid.UUID) -> HTTPException:
+def _ai_failure(
+    session_id: uuid.UUID,
+    error: AIGatewayError,
+) -> HTTPException:
     return HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        status_code=error.http_status_code,
         detail={
-            "message": "The AI assistant is not available right now.",
+            "code": error.error_code,
+            "message": str(error),
             "session_id": str(session_id),
         },
     )
@@ -49,9 +53,13 @@ def _ai_unavailable(session_id: uuid.UUID) -> HTTPException:
     "/courses/{course_id}/chat",
     response_model=ChatResponse,
     responses={
+        status.HTTP_502_BAD_GATEWAY: {
+            "model": ChatFailureResponse,
+            "description": "The AI provider rejected or failed the request.",
+        },
         status.HTTP_503_SERVICE_UNAVAILABLE: {
             "model": ChatFailureResponse,
-            "description": "AI failed; the user turn remains in this session.",
+            "description": "AI is unavailable; the user turn remains in this session.",
         }
     },
 )
@@ -117,7 +125,7 @@ def chat(
 
     except AIGatewayError as exc:
         db.rollback()
-        raise _ai_unavailable(session_id) from exc
+        raise _ai_failure(session_id, exc) from exc
 
     except Exception:
         db.rollback()
@@ -128,7 +136,7 @@ def chat(
                 prompt=data.message,
             )
         except AIGatewayError as exc:
-            raise _ai_unavailable(session_id) from exc
+            raise _ai_failure(session_id, exc) from exc
 
         result = {
             "answer": gateway_answer,

@@ -73,6 +73,7 @@ export type ChatResponse = {
 
 export type ChatFailureResponse = {
   detail: {
+    code: string;
     message: string;
     session_id: string;
   };

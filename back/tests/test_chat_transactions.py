@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
-from app.ai.ai_gateway.ai_gateway import AIGatewayUnavailable
+from app.ai.ai_gateway.ai_gateway import AIGatewayFailed, AIGatewayUnavailable
 from app.api.routes import chat as chat_routes
 from app.main import app
 from app.models.chat import ChatMessage, ChatSession
@@ -48,13 +48,14 @@ class FakeSession:
 
 
 def test_chat_openapi_documents_failure_session_id():
-    response = app.openapi()["paths"]["/api/v1/courses/{course_id}/chat"][
+    responses = app.openapi()["paths"]["/api/v1/courses/{course_id}/chat"][
         "post"
-    ]["responses"]["503"]
+    ]["responses"]
 
-    assert response["content"]["application/json"]["schema"]["$ref"].endswith(
-        "/ChatFailureResponse"
-    )
+    for status_code in ("502", "503"):
+        assert responses[status_code]["content"]["application/json"]["schema"][
+            "$ref"
+        ].endswith("/ChatFailureResponse")
 
 
 def test_fallback_reuses_committed_session(monkeypatch):
@@ -131,7 +132,37 @@ def test_failed_ai_keeps_user_turn_and_returns_session_id(monkeypatch):
     messages = [item for item in db.committed if isinstance(item, ChatMessage)]
 
     assert error.value.status_code == 503
+    assert error.value.detail["code"] == "AI_PROVIDER_UNAVAILABLE"
     assert error.value.detail["session_id"] == str(sessions[0].id)
     assert [(message.role, message.content) for message in messages] == [
         ("user", "keep this message")
     ]
+
+
+def test_provider_failure_returns_specific_error_and_keeps_session(monkeypatch):
+    db = FakeSession()
+    user = SimpleNamespace(id=uuid.uuid4())
+
+    monkeypatch.setattr(
+        chat_routes,
+        "run_agent",
+        lambda **kwargs: (_ for _ in ()).throw(
+            AIGatewayFailed(
+                "The LLM endpoint returned HTTP 400.",
+                error_code="AI_PROVIDER_ERROR",
+            )
+        ),
+    )
+
+    with pytest.raises(HTTPException) as error:
+        chat_routes.chat.__wrapped__(
+            request=SimpleNamespace(),
+            course_id=uuid.uuid4(),
+            data=ChatRequest(message="keep this message"),
+            db=db,
+            current_user=user,
+        )
+
+    assert error.value.status_code == 502
+    assert error.value.detail["code"] == "AI_PROVIDER_ERROR"
+    assert error.value.detail["session_id"]
