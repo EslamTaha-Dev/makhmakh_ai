@@ -34,7 +34,6 @@ class User(Base):
         nullable=False,
     )
 
-    email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", index=True)
 
     role: Mapped[str] = mapped_column(
@@ -101,17 +100,6 @@ class User(Base):
     )
     user_roles = relationship(
         "UserRole",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-    subscriptions = relationship(
-        "Subscription",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-
-    payments = relationship(
-        "Payment",
         back_populates="user",
         cascade="all, delete-orphan",
     )

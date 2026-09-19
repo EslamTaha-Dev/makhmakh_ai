@@ -192,7 +192,6 @@
       "password": "Password",
       "submit": "Sign in",
       "submitting": "Signing in…",
-      "forgot": "Forgot your password?",
       "noAccount": "Don't have an account yet?",
       "createAccount": "Create one",
       "placeholderEmail": "name@example.com",
@@ -212,40 +211,6 @@
       "hasAccount": "Already have an account?",
       "signIn": "Sign in",
       "terms": "By creating an account you agree to use the platform for educational purposes."
-    },
-    "forgot": {
-      "title": "Reset your password",
-      "subtitle": "Enter your email and we will send you a reset link.",
-      "submit": "Send reset link",
-      "submitting": "Sending…",
-      "sentTitle": "Check your inbox",
-      "sentBody": "If that email is registered, you will receive a message with a password reset link.",
-      "devTokenTitle": "Development link",
-      "devTokenBody": "This backend has no mail transport configured, so you can continue directly here:",
-      "useDevToken": "Open the reset page",
-      "backToLogin": "Back to sign in"
-    },
-    "reset": {
-      "title": "New password",
-      "subtitle": "Choose a strong password for your account.",
-      "newPassword": "New password",
-      "confirmPassword": "Confirm password",
-      "submit": "Set password",
-      "submitting": "Updating…",
-      "successTitle": "Password updated",
-      "successBody": "You can sign in with your new password now. All previous sessions were ended to protect your account.",
-      "missingToken": "This link is incomplete or invalid. Request a new reset link.",
-      "goToLogin": "Sign in"
-    },
-    "verify": {
-      "title": "Email verification",
-      "subtitle": "Confirming your email address…",
-      "successTitle": "Email confirmed",
-      "successBody": "Your email is verified. You have full access to the platform.",
-      "errorTitle": "Invalid link",
-      "errorBody": "The link expired or was already used. Request a new verification email from settings.",
-      "missingToken": "No verification token in the link.",
-      "goToDashboard": "Go to dashboard"
     },
     "errors": {
       "invalidCredentials": "That email or password is incorrect.",
@@ -327,8 +292,6 @@
       "enrolling": "Joining…",
       "enrolled": "Joined",
       "continue": "Continue course",
-      "paid": "Paid",
-      "free": "Free",
       "loadMore": "Load more",
       "loadingMore": "Loading…"
     },
@@ -490,10 +453,6 @@
       "email": "Email",
       "role": "Account type",
       "joinedAt": "Member since",
-      "emailUnverified": "Email not verified yet.",
-      "verifyCta": "Verify email",
-      "verifying": "Verifying…",
-      "verified": "Email verified",
       "preferences": "Preferences",
       "languageLabel": "Interface language",
       "languageHint": "Applies immediately and is remembered in this browser.",

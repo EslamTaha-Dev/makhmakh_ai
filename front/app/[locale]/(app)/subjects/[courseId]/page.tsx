@@ -142,7 +142,6 @@ export default function CourseDetailPage() {
   const detail = course.data;
   const isPrivate = detail.visibility === "private";
   const conceptList = concepts.data ?? [];
-  const price = Number(detail.price ?? 0);
 
   return (
     <div className="space-y-8">
@@ -166,10 +165,6 @@ export default function CourseDetailPage() {
                 )}
                 {isPrivate ? t("yourSpace") : t("published")}
               </Badge>
-
-              {!isPrivate && price > 0 ? (
-                <Badge tone="brand">{tSubjects("catalog.paid")}</Badge>
-              ) : null}
 
               {conceptList.length ? (
                 <Badge tone="neutral">

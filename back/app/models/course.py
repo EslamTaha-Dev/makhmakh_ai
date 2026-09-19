@@ -1,8 +1,6 @@
 import uuid
 from datetime import datetime
-from decimal import Decimal
-
-from sqlalchemy import DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,12 +24,6 @@ class Course(Base):
     description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-    )
-
-    price: Mapped[Decimal] = mapped_column(
-        Numeric(12, 2),
-        nullable=False,
-        default=Decimal("0.00"),
     )
 
     created_by: Mapped[uuid.UUID] = mapped_column(
@@ -74,18 +66,6 @@ class Course(Base):
 
     concepts = relationship(
         "Concept",
-        back_populates="course",
-        cascade="all, delete-orphan",
-    )
-
-    subscriptions = relationship(
-        "Subscription",
-        back_populates="course",
-        cascade="all, delete-orphan",
-    )
-
-    payments = relationship(
-        "Payment",
         back_populates="course",
         cascade="all, delete-orphan",
     )

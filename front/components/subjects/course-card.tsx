@@ -28,8 +28,6 @@ export function CourseCard({
   const locale = useLocale();
 
   const isPrivate = course.visibility === "private";
-  const price = Number((course as MyCourse).price ?? 0);
-  const isPaid = !isPrivate && price > 0;
 
   return (
     <article
@@ -52,9 +50,6 @@ export function CourseCard({
             {isPrivate ? t("detail.yourSpace") : t("detail.published")}
           </Badge>
 
-          {isPaid ? (
-            <Badge tone="brand">{t("catalog.paid")}</Badge>
-          ) : null}
         </div>
       </div>
 

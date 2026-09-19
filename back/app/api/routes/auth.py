@@ -9,13 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.rate_limit import limiter
-from app.core.config import get_settings
 from app.core.security import (
     create_access_token,
     generate_refresh_token,
     hash_password,
     hash_refresh_token,
-    generate_one_time_token,
     encrypt_mfa_secret,
     decrypt_mfa_secret,
     password_needs_rehash,
@@ -25,21 +23,15 @@ from app.db.session import get_db
 from app.models.refresh_token import RefreshToken
 from app.models.role import Role, UserRole
 from app.models.user import User
-from app.models.temporary_token import PasswordResetToken, EmailVerificationToken
 from app.schemas.auth import (
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
     TokenResponse,
     UserResponse,
-    ForgotPasswordRequest,
-    ResetPasswordRequest,
-    VerifyEmailRequest,
     ChangePasswordRequest,
-    RegisterResponse,
 )
 from app.services.security_events import record_security_event
-from app.services.queue import email_queue
 
 
 router = APIRouter(
@@ -55,7 +47,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 @router.post(
     "/register",
-    response_model=RegisterResponse,
+    response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def register(
@@ -104,15 +96,6 @@ def register(
 
     db.add(user_role)
 
-    verification_token = generate_one_time_token()
-    db.add(
-        EmailVerificationToken(
-            user_id=user.id,
-            token_hash=hash_refresh_token(verification_token),
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
-        )
-    )
-
     record_security_event(
         db=db,
         event_type="user_registered",
@@ -122,97 +105,7 @@ def register(
     db.commit()
     db.refresh(user)
 
-    try:
-        email_queue.enqueue(
-            "app.services.email_job.send_email_job",
-            user.email,
-            "Verify your Makhmakh email",
-            f"Verify your email: {get_settings().email_verification_url}?token={verification_token}",
-            job_timeout=60,
-        )
-    except Exception:
-        pass
-
-    response = RegisterResponse.model_validate(user)
-
-    if get_settings().environment == "development":
-        response.verification_token = verification_token
-
-    return response
-
-
-@router.post("/verify-email")
-def verify_email(data: VerifyEmailRequest, db: Session = Depends(get_db)):
-    token = db.scalar(
-        select(EmailVerificationToken).where(
-            EmailVerificationToken.token_hash == hash_refresh_token(data.token),
-            EmailVerificationToken.used_at.is_(None),
-        )
-    )
-    now = datetime.now(timezone.utc)
-    if token is None or token.expires_at <= now:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
-    user = db.scalar(select(User).where(User.id == token.user_id))
-    if user is None:
-        raise HTTPException(status_code=400, detail="Invalid verification token")
-    token.used_at = now
-    user.email_verified_at = now
-    db.commit()
-    return {"status": "verified"}
-
-
-@limiter.limit("3/hour")
-@router.post("/forgot-password")
-def forgot_password(request: Request, data: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.scalar(select(User).where(User.email == data.email.lower()))
-    if user is not None:
-        raw_token = generate_one_time_token()
-        db.add(
-            PasswordResetToken(
-                user_id=user.id,
-                token_hash=hash_refresh_token(raw_token),
-                expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
-            )
-        )
-        record_security_event(db=db, event_type="password_reset_requested", user_id=user.id, request=request)
-        db.commit()
-        try:
-            email_queue.enqueue(
-                "app.services.email_job.send_email_job",
-                user.email,
-                "Reset your Makhmakh password",
-                f"Reset your password: {get_settings().password_reset_url}?token={raw_token}",
-                job_timeout=60,
-            )
-        except Exception:
-            pass
-        response = {"status": "accepted"}
-        if get_settings().environment == "development":
-            response["reset_token"] = raw_token
-        return response
-    return {"status": "accepted"}
-
-
-@router.post("/reset-password")
-def reset_password(request: Request, data: ResetPasswordRequest, db: Session = Depends(get_db)):
-    token = db.scalar(
-        select(PasswordResetToken).where(
-            PasswordResetToken.token_hash == hash_refresh_token(data.token),
-            PasswordResetToken.used_at.is_(None),
-        )
-    )
-    now = datetime.now(timezone.utc)
-    if token is None or token.expires_at <= now:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-    user = db.scalar(select(User).where(User.id == token.user_id))
-    if user is None:
-        raise HTTPException(status_code=400, detail="Invalid reset token")
-    user.password_hash = hash_password(data.new_password)
-    token.used_at = now
-    db.execute(update(RefreshToken).where(RefreshToken.user_id == user.id).values(revoked=True, revoked_at=now, revoked_reason="password_changed"))
-    record_security_event(db=db, event_type="password_reset_completed", user_id=user.id, request=request)
-    db.commit()
-    return {"status": "password_reset"}
+    return UserResponse.model_validate(user)
 
 
 @router.post("/change-password")

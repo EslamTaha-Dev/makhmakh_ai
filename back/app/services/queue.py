@@ -39,18 +39,6 @@ video_queue = Queue(
 )
 
 
-payment_queue = Queue(
-    "payment_processing",
-    connection=redis_connection,
-)
-
-
-email_queue = Queue(
-    "email_delivery",
-    connection=redis_connection,
-)
-
-
 def resolve_callable(target: Callable[..., Any] | str) -> Callable[..., Any]:
     """Accept either a callable or the dotted path RQ uses for jobs."""
 

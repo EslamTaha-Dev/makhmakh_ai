@@ -41,14 +41,6 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
 
     frontend_url: str = "http://localhost:3000"
-    smtp_host: str = ""
-    smtp_port: int = Field(default=587, ge=1, le=65535)
-    smtp_username: str = ""
-    smtp_password: str = ""
-    smtp_from: str = "noreply@localhost"
-    smtp_starttls: bool = True
-    email_verification_url: str = "http://localhost:3000/verify-email"
-    password_reset_url: str = "http://localhost:3000/reset-password"
     mfa_encryption_key: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
@@ -63,37 +55,6 @@ class Settings(BaseSettings):
         ge=1,
         le=2048,
     )
-
-    payment_provider: str = "paymob"
-
-    payment_request_timeout_seconds: int = Field(
-        default=30,
-        ge=5,
-        le=120,
-    )
-
-    payment_reconciliation_interval_seconds: int = Field(
-        default=300,
-        ge=30,
-        le=3600,
-    )
-
-    subscription_duration_days: int = Field(
-        default=30,
-        ge=1,
-        le=3650,
-    )
-
-    paymob_base_url: str = ""
-    paymob_api_key: str = ""
-    paymob_public_key: str = ""
-    paymob_integration_id: int | None = None
-    paymob_hmac_secret: str = ""
-    paymob_checkout_url: str = ""
-
-    fawry_base_url: str = ""
-    fawry_merchant_code: str = ""
-    fawry_security_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,

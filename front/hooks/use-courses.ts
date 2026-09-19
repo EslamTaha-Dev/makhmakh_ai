@@ -92,7 +92,6 @@ export function useCreateCourse() {
     mutationFn: (input: {
       name: string;
       description?: string | null;
-      price?: number;
     }) => api.createCourse(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.myCourses() });

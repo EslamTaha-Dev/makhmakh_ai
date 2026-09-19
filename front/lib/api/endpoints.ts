@@ -9,7 +9,6 @@ import type {
   CourseGraph,
   CourseProgress,
   CursorPage,
-  ForgotPasswordResponse,
   HealthStatus,
   Lesson,
   LessonVideoStatus,
@@ -19,7 +18,6 @@ import type {
   NotificationItem,
   ProgressRecord,
   ReadyNodes,
-  RegisterResponse,
   SessionInfo,
   TokenResponse,
   User,
@@ -30,7 +28,7 @@ import type {
 /* -------------------------------------------------------------------------- */
 
 export function register(input: { name: string; email: string; password: string }) {
-  return apiRequest<RegisterResponse>("/auth/register", {
+  return apiRequest<User>("/auth/register", {
     method: "POST",
     body: input,
     auth: false,
@@ -60,30 +58,6 @@ export function changePassword(input: {
   return apiRequest<{ status: string }>("/auth/change-password", {
     method: "POST",
     body: input,
-  });
-}
-
-export function forgotPassword(input: { email: string }) {
-  return apiRequest<ForgotPasswordResponse>("/auth/forgot-password", {
-    method: "POST",
-    body: input,
-    auth: false,
-  });
-}
-
-export function resetPassword(input: { token: string; new_password: string }) {
-  return apiRequest<{ status: string }>("/auth/reset-password", {
-    method: "POST",
-    body: input,
-    auth: false,
-  });
-}
-
-export function verifyEmail(input: { token: string }) {
-  return apiRequest<{ status: string }>("/auth/verify-email", {
-    method: "POST",
-    body: input,
-    auth: false,
   });
 }
 
@@ -134,14 +108,12 @@ export function getCourse(courseId: string, signal?: AbortSignal) {
 export function createCourse(input: {
   name: string;
   description?: string | null;
-  price?: number;
 }) {
   return apiRequest<Course>("/courses", {
     method: "POST",
     body: {
       name: input.name,
       description: input.description ?? null,
-      price: input.price ?? 0,
     },
   });
 }

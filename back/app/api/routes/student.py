@@ -36,9 +36,6 @@ def enroll_in_course(
         and course.created_by != current_user.id
     ):
         raise HTTPException(status_code=404, detail="Course not found")
-    if course.price > 0:
-        raise HTTPException(status_code=402, detail="Paid course requires payment")
-
     enrollment = db.scalar(select(Enrollment).where(Enrollment.student_id == current_user.id, Enrollment.course_id == course_id))
     if enrollment is None:
         enrollment = Enrollment(student_id=current_user.id, course_id=course_id, source="free")
@@ -55,7 +52,7 @@ def my_courses(
     current_user: User = Depends(get_current_user),
 ):
     rows = db.execute(select(Course, Enrollment).join(Enrollment, Enrollment.course_id == Course.id).where(Enrollment.student_id == current_user.id).order_by(Enrollment.enrolled_at.desc()).limit(limit)).all()
-    return [{"id": str(course.id), "name": course.name, "description": course.description, "price": float(course.price), "visibility": course.visibility, "created_by": str(course.created_by), "enrolled_at": enrollment.enrolled_at} for course, enrollment in rows]
+    return [{"id": str(course.id), "name": course.name, "description": course.description, "visibility": course.visibility, "created_by": str(course.created_by), "enrolled_at": enrollment.enrolled_at} for course, enrollment in rows]
 
 
 @router.get(

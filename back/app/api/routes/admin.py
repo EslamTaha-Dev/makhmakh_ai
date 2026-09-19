@@ -12,9 +12,6 @@ from app.models.user import User
 from app.models.admin_audit_log import AdminAuditLog
 from app.models.enrollment import Enrollment
 from app.models.course import Course
-from app.models.payment import Payment
-from app.payments.service import apply_payment_status, get_payment_provider
-from app.payments.types import PaymentStatus
 from app.core.pagination import decode_cursor, encode_cursor
 from app.models.ai_conversation import AIConversation
 from app.models.ai_message import AIMessage
@@ -207,53 +204,6 @@ def admin_audit_logs(
 ):
     limit = max(1, min(limit, 100))
     return db.scalars(select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(limit)).all()
-
-
-@router.get("/payments")
-def admin_payments(
-    limit: int = Query(default=20, ge=1, le=100),
-    status_filter: str | None = Query(default=None, alias="status"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(*ADMIN_ROLES)),
-):
-    statement = select(Payment).order_by(Payment.created_at.desc()).limit(limit)
-    if status_filter:
-        statement = statement.where(Payment.status == status_filter)
-    payments = db.scalars(statement).all()
-    return [
-        {
-            "id": str(payment.id),
-            "user_id": str(payment.user_id),
-            "course_id": str(payment.course_id),
-            "provider": payment.provider,
-            "status": payment.status,
-            "amount": str(payment.amount),
-            "created_at": payment.created_at,
-        }
-        for payment in payments
-    ]
-
-
-@router.post("/payments/{payment_id}/refund")
-def admin_refund_payment(
-    payment_id: UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(*ADMIN_ROLES)),
-):
-    payment = db.scalar(select(Payment).where(Payment.id == payment_id))
-    if payment is None:
-        raise HTTPException(status_code=404, detail="Payment not found")
-    if payment.status != PaymentStatus.PAID.value:
-        raise HTTPException(status_code=409, detail="Only paid payments can be refunded")
-    if not payment.external_id:
-        raise HTTPException(status_code=409, detail="Payment has no provider reference")
-
-    provider = get_payment_provider(payment.provider)
-    if not provider.refund_payment(payment.external_id, payment.amount):
-        raise HTTPException(status_code=502, detail="Payment provider rejected refund")
-
-    apply_payment_status(db, payment, PaymentStatus.REFUNDED)
-    return {"payment_id": str(payment.id), "status": payment.status}
 
 
 @router.get("/conversations/{conversation_id}")

@@ -19,7 +19,6 @@ from app.api.routes.health import router as health_router
 from app.api.routes.lessons import router as lessons_router
 from app.api.routes.map import router as map_router
 from app.api.routes.materials import router as materials_router
-from app.api.routes.payments import router as payments_router
 from app.api.routes.progress import router as progress_router
 from app.api.routes.student import router as student_router
 from app.core.config import settings
@@ -93,11 +92,6 @@ app.include_router(
 
 app.include_router(
     materials_router,
-    prefix="/api/v1",
-)
-
-app.include_router(
-    payments_router,
     prefix="/api/v1",
 )
 

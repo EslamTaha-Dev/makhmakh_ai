@@ -17,18 +17,15 @@ export type SessionStatus = "loading" | "authenticated" | "guest";
 type SessionState = {
   status: SessionStatus;
   user: User | null;
-  /** Development-only email verification token echoed by the register endpoint. */
-  pendingVerificationToken: string | null;
   bootstrap: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (
     name: string,
     email: string,
     password: string,
-  ) => Promise<{ user: User; verificationToken: string | null }>;
+  ) => Promise<User>;
   signOut: (options?: { remote?: boolean }) => Promise<void>;
   refreshUser: () => Promise<User | null>;
-  clearPendingVerificationToken: () => void;
 };
 
 let bootstrapped = false;
@@ -36,7 +33,6 @@ let bootstrapped = false;
 export const useSessionStore = create<SessionState>((set, get) => ({
   status: "loading",
   user: null,
-  pendingVerificationToken: null,
 
   async bootstrap() {
     // Only ever resolve the session once per page load.
@@ -70,16 +66,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
 
   async signUp(name, email, password) {
-    const registered = await api.register({ name, email, password });
+    await api.register({ name, email, password });
 
     // Registration returns the user only, so sign in to get a session.
     const user = await get().signIn(email, password);
 
-    const verificationToken = registered.verification_token ?? null;
-
-    set({ pendingVerificationToken: verificationToken });
-
-    return { user, verificationToken };
+    return user;
   },
 
   async signOut(options) {
@@ -92,7 +84,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
 
     clearTokens();
-    set({ status: "guest", user: null, pendingVerificationToken: null });
+    set({ status: "guest", user: null });
   },
 
   async refreshUser() {
@@ -110,9 +102,6 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
 
-  clearPendingVerificationToken() {
-    set({ pendingVerificationToken: null });
-  },
 }));
 
 // The API client clears tokens when a refresh fails; mirror that into the store.

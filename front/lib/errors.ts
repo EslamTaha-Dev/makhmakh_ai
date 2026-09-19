@@ -3,8 +3,6 @@ import { ApiError } from "@/lib/api/client";
 export type ErrorContext =
   | "login"
   | "register"
-  | "forgot"
-  | "reset"
   | "upload"
   | "chat"
   | "generic";
@@ -33,10 +31,6 @@ export function describeApiError(
     }
 
     if (error.status === 401) {
-      if (context === "reset") {
-        return { kind: "key", key: "auth.reset.missingToken" };
-      }
-
       if (context === "login" || context === "register") {
         return { kind: "key", key: "auth.errors.invalidCredentials" };
       }
@@ -111,9 +105,6 @@ export function describeApiError(
         }
       }
 
-      if (matches(detail, ["verification", "reset"]) && detail) {
-        return { kind: "raw", message: detail };
-      }
     }
 
     // 422 validation details are already descriptive, so surface them untouched.

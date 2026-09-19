@@ -105,10 +105,6 @@ def hash_refresh_token(token: str) -> str:
     ).hexdigest()
 
 
-def generate_one_time_token() -> str:
-    return secrets.token_urlsafe(48)
-
-
 def encrypt_mfa_secret(secret: str) -> str:
     key = get_settings().mfa_encryption_key
     if not key:

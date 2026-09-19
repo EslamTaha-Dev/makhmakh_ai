@@ -64,7 +64,6 @@ export function CreateSpaceDialog({
       const course = await createCourse.mutateAsync({
         name: values.name,
         description: values.description?.trim() ? values.description : null,
-        price: 0,
       });
 
       toast.success(t("success"), { description: course.name });

@@ -16,20 +16,10 @@ export type User = {
   created_at: string;
 };
 
-export type RegisterResponse = User & {
-  /** Only returned by a development backend, so the flow is testable without SMTP. */
-  verification_token?: string | null;
-};
-
 export type TokenResponse = {
   access_token: string;
   refresh_token: string;
   token_type: string;
-};
-
-export type ForgotPasswordResponse = {
-  status: string;
-  reset_token?: string;
 };
 
 export type CourseVisibility = "public" | "private";
@@ -38,8 +28,6 @@ export type Course = {
   id: string;
   name: string;
   description: string | null;
-  /** Decimal is serialised as a string by pydantic. */
-  price: string;
   visibility: CourseVisibility;
   created_by: string;
   created_at: string;
@@ -49,7 +37,6 @@ export type MyCourse = {
   id: string;
   name: string;
   description: string | null;
-  price: number;
   visibility: CourseVisibility;
   created_by: string;
   enrolled_at: string;

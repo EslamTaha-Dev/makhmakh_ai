@@ -21,7 +21,6 @@ import {
 } from "@/hooks/use-account";
 import { useApiErrorMessage } from "@/hooks/use-api-error";
 import { useRouter } from "@/i18n/routing";
-import * as api from "@/lib/api/endpoints";
 import { useSessionStore } from "@/lib/auth/session-store";
 import { formatDateTime, initialsFromName } from "@/lib/format";
 import { isRoleKey } from "@/lib/roles";
@@ -33,21 +32,15 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
   const tRoles = useTranslations("roles");
-  const tVerify = useTranslations("auth.verify");
   const tValidation = useTranslations("validation");
   const locale = useLocale();
   const router = useRouter();
   const describeError = useApiErrorMessage();
 
   const user = useSessionStore((state) => state.user);
-  const pendingVerificationToken = useSessionStore(
-    (state) => state.pendingVerificationToken,
-  );
   const signOut = useSessionStore((state) => state.signOut);
-  const refreshUser = useSessionStore((state) => state.refreshUser);
 
   const [tab, setTab] = React.useState<Tab>("profile");
-  const [verifying, setVerifying] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
 
   const sessions = useActiveSessions();
@@ -72,21 +65,6 @@ export default function SettingsPage() {
     { key: "security", label: t("tabs.security"), icon: ShieldCheck },
     { key: "sessions", label: t("tabs.sessions"), icon: Smartphone },
   ];
-
-  const handleVerifyEmail = async () => {
-    if (!pendingVerificationToken) return;
-
-    setVerifying(true);
-    try {
-      await api.verifyEmail({ token: pendingVerificationToken });
-      await refreshUser();
-      toast.success(tVerify("successTitle"));
-    } catch (error) {
-      toast.error(describeError(error, "generic"));
-    } finally {
-      setVerifying(false);
-    }
-  };
 
   const handleChangePassword = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -203,22 +181,6 @@ export default function SettingsPage() {
               {t("profile.readOnlyHint")}
             </p>
 
-            {pendingVerificationToken ? (
-              <div className="mt-5">
-                <Alert tone="warning" title={t("profile.emailUnverified")}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={handleVerifyEmail}
-                    loading={verifying}
-                    loadingText={t("profile.verifying")}
-                  >
-                    {t("profile.verifyCta")}
-                  </Button>
-                </Alert>
-              </div>
-            ) : null}
           </Card>
 
           <Card className="p-6">

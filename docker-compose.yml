@@ -130,19 +130,6 @@ services:
       redis:
         condition: service_healthy
 
-  task-worker:
-    build:
-      <<: *backend-build
-      target: api
-    command: ["python", "-m", "app.worker"]
-    environment:
-      <<: *backend-environment
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-
 volumes:
   uploads:
   generated:

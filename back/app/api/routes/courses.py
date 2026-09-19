@@ -1,6 +1,4 @@
 import uuid
-from decimal import Decimal
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -120,7 +118,6 @@ def create_course(
     course = Course(
         name=data.name.strip(),
         description=data.description,
-        price=data.price if can_publish else Decimal("0.00"),
         visibility=visibility,
         created_by=current_user.id,
     )
@@ -229,7 +226,6 @@ def update_course(
         raise HTTPException(status_code=404, detail="Course not found")
     course.name = data.name.strip()
     course.description = data.description
-    course.price = data.price
     db.commit()
     db.refresh(course)
     return course

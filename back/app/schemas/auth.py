@@ -39,16 +39,6 @@ class UserResponse(BaseModel):
     )
 
 
-class RegisterResponse(UserResponse):
-    """Registration payload.
-
-    ``verification_token`` is only populated in development environments so the
-    email verification flow can be exercised without a working SMTP server.
-    """
-
-    verification_token: str | None = None
-
-
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -57,19 +47,6 @@ class TokenResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
-
-
-class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
-
-
-class ResetPasswordRequest(BaseModel):
-    token: str = Field(min_length=20)
-    new_password: str = Field(min_length=8, max_length=128)
-
-
-class VerifyEmailRequest(BaseModel):
-    token: str = Field(min_length=20)
 
 
 class ChangePasswordRequest(BaseModel):
