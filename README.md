@@ -29,8 +29,7 @@ docker compose up --build
 
 This brings up the frontend on `http://localhost:3000`, Postgres (with `pgvector`),
 Redis, the API on `http://localhost:8000`, the workers that process uploaded
-material and lightweight scheduled jobs. Video generation is optional because its
-local speech stack is large; enable
+material. Video generation is optional because its local speech stack is large; enable
 it with `docker compose --profile media up --build`. Before the API and workers
 start, the one-shot `migrate` service applies all Alembic migrations and seeds the
 canonical roles, including the default `student` role.
@@ -61,7 +60,6 @@ Worker processes (when Redis is available):
 
 ```bash
 rq worker material_processing --url redis://localhost:6379/0
-python -m app.worker                    # payments, email, and scheduled cleanup
 ```
 
 ### Frontend
@@ -79,8 +77,8 @@ The Arabic UI is served from `/`, English from `/en`.
 
 ## Configuration
 
-* `back/.env.example` — database, Redis, JWT, SMTP, payment providers, and the AI
-  gateway credentials. Gemini keys can be supplied as `GEMINI_API_KEYS` (comma
+* `back/.env.example` — database, Redis, JWT, identity, and AI gateway
+  configuration. Gemini keys can be supplied as `GEMINI_API_KEYS` (comma
   separated) or through the individual `GEMINI_API_KEY_DEV` / `GEMINI_API_KEY_PROD_N`
   variables used by the multi-project rotation.
 * `front/.env.example` — `NEXT_PUBLIC_API_URL` (backend origin) and
