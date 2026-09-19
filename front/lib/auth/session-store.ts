@@ -13,10 +13,12 @@ import {
 } from "@/lib/auth/tokens";
 
 export type SessionStatus = "loading" | "authenticated" | "guest";
+export type AuthLossReason = "session-expired" | null;
 
 type SessionState = {
   status: SessionStatus;
   user: User | null;
+  authLossReason: AuthLossReason;
   bootstrap: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (
@@ -33,6 +35,7 @@ let bootstrapped = false;
 export const useSessionStore = create<SessionState>((set, get) => ({
   status: "loading",
   user: null,
+  authLossReason: null,
 
   async bootstrap() {
     // Only ever resolve the session once per page load.
@@ -40,18 +43,24 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     bootstrapped = true;
 
     if (!hasTokens()) {
-      set({ status: "guest", user: null });
+      set({ status: "guest", user: null, authLossReason: null });
       return;
     }
 
     try {
       const user = await api.getMe();
-      set({ status: "authenticated", user });
+      set({ status: "authenticated", user, authLossReason: null });
     } catch (error) {
       if (error instanceof ApiError && error.isUnauthorized) {
         clearTokens();
+        set({
+          status: "guest",
+          user: null,
+          authLossReason: "session-expired",
+        });
+        return;
       }
-      set({ status: "guest", user: null });
+      set({ status: "guest", user: null, authLossReason: null });
     }
   },
 
@@ -60,7 +69,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     setTokens(tokens.access_token, tokens.refresh_token);
 
     const user = await api.getMe();
-    set({ status: "authenticated", user });
+    set({ status: "authenticated", user, authLossReason: null });
 
     return user;
   },
@@ -84,18 +93,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
 
     clearTokens();
-    set({ status: "guest", user: null });
+    set({ status: "guest", user: null, authLossReason: null });
   },
 
   async refreshUser() {
     if (!hasTokens()) {
-      set({ status: "guest", user: null });
+      set({ status: "guest", user: null, authLossReason: null });
       return null;
     }
 
     try {
       const user = await api.getMe();
-      set({ status: "authenticated", user });
+      set({ status: "authenticated", user, authLossReason: null });
       return user;
     } catch {
       return null;
@@ -106,7 +115,11 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
 // The API client clears tokens when a refresh fails; mirror that into the store.
 onAuthLoss(() => {
-  useSessionStore.setState({ status: "guest", user: null });
+  useSessionStore.setState({
+    status: "guest",
+    user: null,
+    authLossReason: "session-expired",
+  });
 });
 
 export function useCurrentUser(): User | null {

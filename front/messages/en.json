@@ -188,6 +188,7 @@
     "login": {
       "title": "Welcome back",
       "subtitle": "Sign in and pick up where you left off.",
+      "sessionExpired": "Your session has expired. Sign in again to continue.",
       "email": "Email address",
       "password": "Password",
       "submit": "Sign in",

@@ -29,6 +29,7 @@ export default function LoginPage() {
   const signIn = useSessionStore((state) => state.signIn);
   // The app shell sends guests here with the page they wanted.
   const { value: nextPath } = useQueryParam("next");
+  const { value: reason } = useQueryParam("reason");
 
   const schema = z.object({
     email: z
@@ -73,6 +74,10 @@ export default function LoginPage() {
 
       {errors.root?.message ? (
         <Alert tone="error">{errors.root.message}</Alert>
+      ) : null}
+
+      {reason === "session-expired" ? (
+        <Alert tone="warning">{t("sessionExpired")}</Alert>
       ) : null}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>

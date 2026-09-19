@@ -21,14 +21,21 @@ export function BrandedSplash({ label }: { label?: string }) {
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const status = useSessionStore((state) => state.status);
+  const authLossReason = useSessionStore((state) => state.authLossReason);
   const router = useRouter();
   const pathname = usePathname();
 
   React.useEffect(() => {
     if (status === "guest") {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      const query = new URLSearchParams({ next: pathname });
+
+      if (authLossReason) {
+        query.set("reason", authLossReason);
+      }
+
+      router.replace(`/login?${query.toString()}`);
     }
-  }, [status, router, pathname]);
+  }, [status, authLossReason, router, pathname]);
 
   if (status !== "authenticated") {
     return <BrandedSplash label={t("loading")} />;
