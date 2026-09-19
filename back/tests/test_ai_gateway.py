@@ -7,42 +7,44 @@ from app.ai.ai_gateway import ai_gateway
 
 def settings(**overrides):
     values = {
-        "gemini_api_key": "gemini-token",
-        "openrouter_api_key": "openrouter-token",
-        "ai_gateway_provider": "gemini",
+        "llm_base_url": "https://router.example/v1",
+        "llm_api_key": "single-token",
+        "llm_model": "provider/model",
         "mock_ai": False,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
 
 
-def test_provider_uses_one_configured_token(monkeypatch):
-    monkeypatch.setattr(ai_gateway, "get_settings", settings)
+def test_client_uses_configured_endpoint_without_retries(monkeypatch):
+    captured = {}
 
-    assert ai_gateway.get_provider_api_key("gemini") == "gemini-token"
-    assert ai_gateway.get_provider_api_key("openrouter") == "openrouter-token"
+    def fake_openai(**kwargs):  # noqa: ANN003
+        captured.update(kwargs)
+        return object()
 
+    monkeypatch.setattr(ai_gateway, "OpenAI", fake_openai)
 
-def test_missing_or_unknown_provider_token_is_unavailable(monkeypatch):
-    monkeypatch.setattr(
-        ai_gateway,
-        "get_settings",
-        lambda: settings(gemini_api_key=""),
+    client = ai_gateway.create_openai_client(
+        "https://router.example/v1",
+        "single-token",
     )
 
-    with pytest.raises(ai_gateway.AIGatewayUnavailable):
-        ai_gateway.get_provider_api_key("gemini")
+    assert client is not None
+    assert captured == {
+        "base_url": "https://router.example/v1",
+        "api_key": "single-token",
+        "max_retries": 0,
+        "timeout": ai_gateway.REQUEST_TIMEOUT_SECONDS,
+    }
 
-    with pytest.raises(ai_gateway.AIGatewayUnavailable):
-        ai_gateway.get_provider_api_key("unsupported")
 
-
-def test_execute_calls_provider_once_with_configured_token(monkeypatch):
+def test_execute_calls_chat_completions_once(monkeypatch):
     monkeypatch.setattr(ai_gateway, "get_settings", settings)
     calls = []
 
-    def fake_call_llm(provider, model, prompt, api_key):  # noqa: ANN001
-        calls.append((provider, model, prompt, api_key))
+    def fake_call_llm(base_url, api_key, model, prompt):  # noqa: ANN001
+        calls.append((base_url, api_key, model, prompt))
         return "answer"
 
     monkeypatch.setattr(ai_gateway, "_call_llm", fake_call_llm)
@@ -50,50 +52,157 @@ def test_execute_calls_provider_once_with_configured_token(monkeypatch):
     result = ai_gateway.ai_gateway_execute("chat", "hello")
 
     assert result == "answer"
-    assert len(calls) == 1
-    assert calls[0][0] == "gemini"
-    assert calls[0][2:] == ("hello", "gemini-token")
+    assert calls == [
+        (
+            "https://router.example/v1",
+            "single-token",
+            "provider/model",
+            "hello",
+        )
+    ]
 
 
 @pytest.mark.parametrize(
-    "message",
+    ("setting_name", "env_var"),
     [
-        "401 API key not valid",
-        "429 RESOURCE_EXHAUSTED: quota exceeded",
+        ("llm_base_url", "LLM_BASE_URL"),
+        ("llm_api_key", "LLM_API_KEY"),
+        ("llm_model", "LLM_MODEL"),
     ],
 )
-def test_execute_maps_credential_and_quota_errors_to_unavailable(
+def test_missing_configuration_is_unavailable(
     monkeypatch,
-    message,
+    setting_name,
+    env_var,
 ):
-    monkeypatch.setattr(ai_gateway, "get_settings", settings)
-
-    def fail_once(**kwargs):  # noqa: ANN003
-        raise RuntimeError(message)
-
-    monkeypatch.setattr(ai_gateway, "_call_llm", fail_once)
-
-    with pytest.raises(ai_gateway.AIGatewayUnavailable):
-        ai_gateway.ai_gateway_execute("chat", "hello")
-
-
-def test_execute_surfaces_other_provider_failures(monkeypatch):
-    monkeypatch.setattr(ai_gateway, "get_settings", settings)
-
-    def fail_once(**kwargs):  # noqa: ANN003
-        raise ValueError("prompt rejected by safety filter")
-
-    monkeypatch.setattr(ai_gateway, "_call_llm", fail_once)
-
-    with pytest.raises(ai_gateway.AIGatewayFailed):
-        ai_gateway.ai_gateway_execute("chat", "hello")
-
-
-def test_mock_mode_does_not_require_a_token(monkeypatch):
     monkeypatch.setattr(
         ai_gateway,
         "get_settings",
-        lambda: settings(gemini_api_key="", mock_ai=True),
+        lambda: settings(**{setting_name: " "}),
+    )
+
+    with pytest.raises(ai_gateway.AIGatewayUnavailable, match=env_var):
+        ai_gateway.ai_gateway_execute("chat", "hello")
+
+
+def test_call_llm_uses_standard_chat_completion_shape(monkeypatch):
+    captured = {}
+
+    def create(**kwargs):  # noqa: ANN003
+        captured.update(kwargs)
+        message = SimpleNamespace(content="portable answer")
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(create=create),
+        )
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "create_openai_client",
+        lambda base_url, api_key: client,
+    )
+
+    result = ai_gateway._call_llm(
+        "https://router.example/v1",
+        "single-token",
+        "provider/model",
+        "hello",
+    )
+
+    assert result == "portable answer"
+    assert captured == {
+        "model": "provider/model",
+        "messages": [{"role": "user", "content": "hello"}],
+    }
+
+
+@pytest.mark.parametrize("content", [None, "", "   "])
+def test_empty_completion_is_a_gateway_failure(monkeypatch, content):
+    message = SimpleNamespace(content=content)
+    client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(
+                create=lambda **kwargs: SimpleNamespace(  # noqa: ARG005
+                    choices=[SimpleNamespace(message=message)]
+                )
+            )
+        )
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "create_openai_client",
+        lambda base_url, api_key: client,
+    )
+
+    with pytest.raises(ai_gateway.AIGatewayFailed, match="empty response"):
+        ai_gateway._call_llm("https://router.example/v1", "token", "model", "hi")
+
+
+def test_authentication_error_is_unavailable(monkeypatch):
+    class FakeAuthenticationError(Exception):
+        pass
+
+    monkeypatch.setattr(ai_gateway, "get_settings", settings)
+    monkeypatch.setattr(
+        ai_gateway,
+        "AuthenticationError",
+        FakeAuthenticationError,
+    )
+    monkeypatch.setattr(
+        ai_gateway,
+        "_call_llm",
+        lambda **kwargs: (_ for _ in ()).throw(FakeAuthenticationError()),
+    )
+
+    with pytest.raises(ai_gateway.AIGatewayUnavailable, match="credential"):
+        ai_gateway.ai_gateway_execute("chat", "hello")
+
+
+def test_rate_limit_error_is_unavailable(monkeypatch):
+    class FakeRateLimitError(Exception):
+        pass
+
+    monkeypatch.setattr(ai_gateway, "get_settings", settings)
+    monkeypatch.setattr(ai_gateway, "RateLimitError", FakeRateLimitError)
+    monkeypatch.setattr(
+        ai_gateway,
+        "_call_llm",
+        lambda **kwargs: (_ for _ in ()).throw(FakeRateLimitError()),
+    )
+
+    with pytest.raises(ai_gateway.AIGatewayUnavailable, match="rate limited"):
+        ai_gateway.ai_gateway_execute("chat", "hello")
+
+
+def test_status_error_is_gateway_failure(monkeypatch):
+    class FakeStatusError(Exception):
+        status_code = 400
+
+    monkeypatch.setattr(ai_gateway, "get_settings", settings)
+    monkeypatch.setattr(ai_gateway, "APIStatusError", FakeStatusError)
+    monkeypatch.setattr(
+        ai_gateway,
+        "_call_llm",
+        lambda **kwargs: (_ for _ in ()).throw(FakeStatusError()),
+    )
+
+    with pytest.raises(ai_gateway.AIGatewayFailed, match="HTTP 400"):
+        ai_gateway.ai_gateway_execute("chat", "hello")
+
+
+def test_mock_mode_does_not_require_configuration(monkeypatch):
+    monkeypatch.setattr(
+        ai_gateway,
+        "get_settings",
+        lambda: settings(
+            llm_base_url="",
+            llm_api_key="",
+            llm_model="",
+            mock_ai=True,
+        ),
     )
 
     assert ai_gateway.ai_gateway_execute("chat", "hello").startswith("[mock:chat]")
+    assert ai_gateway.get_configured_llm_model() == "mock"

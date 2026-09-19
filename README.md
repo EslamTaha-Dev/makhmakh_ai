@@ -48,9 +48,10 @@ uvicorn app.main:app --reload --port 8000
 
 For an API-only environment, install `requirements.txt`. Material processing,
 video generation, local embeddings, and test tooling have separate requirement
-files so production images only carry the features they run. Gemini embeddings
-are the default; local embeddings require `requirements-local-embeddings.txt`
-and `EMBEDDING_PROVIDER=sentence-transformers`.
+files so production images only carry the features they run. Remote embeddings
+use a separately configured OpenAI-compatible endpoint; local embeddings require
+`requirements-local-embeddings.txt` and
+`EMBEDDING_PROVIDER=sentence-transformers`.
 
 Queues are optional in development when `RUN_JOBS_INLINE=true`; otherwise queue
 connection failures are returned instead of attempting heavy worker jobs in the
@@ -78,10 +79,17 @@ The Arabic UI is served from `/`, English from `/en`.
 ## Configuration
 
 * `back/.env.example` — database, Redis, JWT, identity, and AI gateway
-  configuration. Set one `GEMINI_API_KEY` or `OPENROUTER_API_KEY` for the
-  provider selected by `AI_GATEWAY_PROVIDER`.
+  configuration. Set `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` for any
+  OpenAI-compatible Chat Completions endpoint. OpenRouter uses
+  `https://openrouter.ai/api/v1`; OmniRouter uses
+  `https://omnirouter.li/v1`.
 * `front/.env.example` — `NEXT_PUBLIC_API_URL` (backend origin) and
   `NEXT_PUBLIC_SITE_URL` (canonical/OG origin).
+
+Embeddings have independent `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`, and
+`EMBEDDING_MODEL` settings. The configured endpoint must support the OpenAI
+Embeddings API and 384-dimensional output. Changing the embedding model causes
+stored content to be regenerated for the new model.
 
 The API is versioned under `/api/v1` and its contract is published at
 `http://localhost:8000/docs`.
@@ -107,7 +115,7 @@ Backend:
 
 ```bash
 cd back
-pytest app/ai/ai_gateway -q     # AI gateway key rotation, no network calls
+pytest tests -q                 # AI gateway and backend tests, no AI network calls
 alembic upgrade head            # migrations
 ```
 

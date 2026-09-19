@@ -5,7 +5,10 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.ai.agent import plan_tool
-from app.ai.ai_gateway.ai_gateway import ai_gateway_execute
+from app.ai.ai_gateway.ai_gateway import (
+    ai_gateway_execute,
+    get_configured_llm_model,
+)
 from app.services.tools.agent_tools import (
     search_course_content,
     get_student_progress,
@@ -121,6 +124,6 @@ Return only the final answer for the student.
         "tool_name": tool_name,
         "tool_result": tool_result,
         "latency_ms": latency_ms,
-        "model": "gemini-3.6-flash",
+        "model": get_configured_llm_model(),
         "fallback_mode": "rag",
     }

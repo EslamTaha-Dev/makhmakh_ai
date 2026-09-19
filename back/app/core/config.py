@@ -19,15 +19,21 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     run_jobs_inline: bool = False
 
-    embedding_provider: Literal["gemini", "sentence-transformers"] = "gemini"
-    active_embedding_model: str = "intfloat/multilingual-e5-small"
+    embedding_provider: Literal[
+        "openai-compatible",
+        "sentence-transformers",
+    ] = "openai-compatible"
+    embedding_base_url: str = ""
+    embedding_api_key: str = ""
+    embedding_model: str = ""
+    local_embedding_model: str = "intfloat/multilingual-e5-small"
 
     jwt_secret_key: str
 
-    gemini_api_key: str = ""
-    openrouter_api_key: str = ""
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
     mock_ai: bool = False
-    ai_gateway_provider: str = "gemini"
     jwt_algorithm: str = "HS256"
     jwt_private_key: str | None = None
     jwt_public_key: str | None = None

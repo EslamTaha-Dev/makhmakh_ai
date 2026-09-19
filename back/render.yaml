@@ -17,17 +17,23 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-      - key: GEMINI_API_KEY
+      - key: LLM_BASE_URL
         sync: false
-      - key: OPENROUTER_API_KEY
+      - key: LLM_API_KEY
         sync: false
-      - key: AI_GATEWAY_PROVIDER
-        value: gemini
+      - key: LLM_MODEL
+        sync: false
       - key: RUN_JOBS_INLINE
         value: "true"
       - key: UPLOAD_DIR
         value: uploads
       - key: EMBEDDING_PROVIDER
-        value: gemini
-      - key: ACTIVE_EMBEDDING_MODEL
+        value: openai-compatible
+      - key: EMBEDDING_BASE_URL
+        sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: LOCAL_EMBEDDING_MODEL
         value: intfloat/multilingual-e5-small

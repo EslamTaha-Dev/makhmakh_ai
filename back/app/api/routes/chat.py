@@ -22,7 +22,11 @@ from app.models.ai_message import AIMessage
 from app.models.student_node_mastery import StudentNodeMastery
 from app.services.agent_service import run_agent
 
-from app.ai.ai_gateway.ai_gateway import AIGatewayError, ai_gateway_execute
+from app.ai.ai_gateway.ai_gateway import (
+    AIGatewayError,
+    ai_gateway_execute,
+    get_configured_llm_model,
+)
 
 router = APIRouter(
     tags=["Chat"],
@@ -120,7 +124,7 @@ def chat(
             "answer": gateway_answer,
             "tool_result": {},
             "tool_name": None,
-            "model": "gemini-3.6-flash",
+            "model": get_configured_llm_model(),
             "fallback_mode": "direct",
         }
 

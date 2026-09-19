@@ -1,16 +1,16 @@
 import hashlib
 from functools import lru_cache
 
-from google import genai
-from google.genai import types
-
-from app.ai.ai_gateway.ai_gateway import GEMINI_PROVIDER, get_provider_api_key
+from app.ai.ai_gateway.ai_gateway import (
+    AIGatewayUnavailable,
+    create_openai_client,
+)
 from app.core.config import get_settings
 
 E5_PROVIDER = "sentence-transformers"
-GEMINI_PROVIDER_NAME = "gemini"
-GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
+OPENAI_COMPATIBLE_PROVIDER = "openai-compatible"
 EMBEDDING_DIMENSION = 384
+
 
 @lru_cache(maxsize=1)
 def get_embedding_model():
@@ -21,17 +21,21 @@ def get_embedding_model():
             "Local embeddings require requirements-local-embeddings.txt"
         ) from exc
 
-    return SentenceTransformer(get_settings().active_embedding_model)
+    return SentenceTransformer(get_settings().local_embedding_model)
 
 
 def get_embedding_metadata() -> tuple[str, int]:
     settings = get_settings()
 
-    if settings.embedding_provider == GEMINI_PROVIDER_NAME:
-        return GEMINI_EMBEDDING_MODEL, EMBEDDING_DIMENSION
+    if settings.mock_ai and not settings.embedding_model.strip():
+        return "mock", EMBEDDING_DIMENSION
+
+    if settings.embedding_provider == OPENAI_COMPATIBLE_PROVIDER:
+        model = _required(settings.embedding_model, "EMBEDDING_MODEL")
+        return model, EMBEDDING_DIMENSION
 
     if settings.embedding_provider == E5_PROVIDER:
-        return settings.active_embedding_model, EMBEDDING_DIMENSION
+        return settings.local_embedding_model, EMBEDDING_DIMENSION
 
     raise ValueError(
         f"Unsupported embedding provider: {settings.embedding_provider}"
@@ -50,37 +54,57 @@ def _mock_embedding(text: str) -> list[float]:
     return [value / magnitude for value in values]
 
 
-def _gemini_embeddings(texts: list[str], task_type: str) -> list[list[float]]:
-    api_key = get_provider_api_key(GEMINI_PROVIDER)
-    client = genai.Client(api_key=api_key)
-    response = client.models.embed_content(
-        model=GEMINI_EMBEDDING_MODEL,
-        contents=texts,
-        config=types.EmbedContentConfig(
-            task_type=task_type,
-            output_dimensionality=EMBEDDING_DIMENSION,
-        ),
+def _required(value: str, env_var: str) -> str:
+    value = value.strip()
+
+    if not value:
+        raise AIGatewayUnavailable(f"{env_var} is not configured.")
+
+    return value
+
+
+def _remote_embeddings(texts: list[str]) -> list[list[float]]:
+    settings = get_settings()
+    client = create_openai_client(
+        _required(settings.embedding_base_url, "EMBEDDING_BASE_URL"),
+        _required(settings.embedding_api_key, "EMBEDDING_API_KEY"),
+    )
+    response = client.embeddings.create(
+        model=_required(settings.embedding_model, "EMBEDDING_MODEL"),
+        input=texts,
+        dimensions=EMBEDDING_DIMENSION,
     )
 
-    embeddings = [item.values for item in response.embeddings or []]
+    embeddings = [
+        item.embedding
+        for item in sorted(response.data, key=lambda item: item.index)
+    ]
 
     if len(embeddings) != len(texts):
-        raise RuntimeError("Gemini returned an unexpected number of embeddings")
+        raise RuntimeError(
+            "The embedding endpoint returned an unexpected number of vectors"
+        )
 
     if any(len(embedding) != EMBEDDING_DIMENSION for embedding in embeddings):
-        raise RuntimeError("Gemini embedding dimension does not match pgvector")
+        raise RuntimeError(
+            "The embedding endpoint returned vectors that do not match "
+            f"the required {EMBEDDING_DIMENSION} dimensions"
+        )
 
     return embeddings
 
 
-def _embed(texts: list[str], task_type: str) -> list[list[float]]:
+def _embed(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+
     settings = get_settings()
 
     if settings.mock_ai:
         return [_mock_embedding(text) for text in texts]
 
-    if settings.embedding_provider == GEMINI_PROVIDER_NAME:
-        return _gemini_embeddings(texts, task_type)
+    if settings.embedding_provider == OPENAI_COMPATIBLE_PROVIDER:
+        return _remote_embeddings(texts)
 
     if settings.embedding_provider == E5_PROVIDER:
         model = get_embedding_model()
@@ -98,8 +122,8 @@ def _embed(texts: list[str], task_type: str) -> list[list[float]]:
 
 
 def embed_text(text: str) -> list[float]:
-    return _embed([text], "RETRIEVAL_QUERY")[0]
+    return _embed([text])[0]
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    return _embed(texts, "RETRIEVAL_DOCUMENT")
+    return _embed(texts)
