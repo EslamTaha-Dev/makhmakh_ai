@@ -24,11 +24,12 @@ content with citations.
 ### Everything in Docker
 
 ```bash
+cp .env.example .env   # then fill in the secrets
 docker compose up --build
 ```
 
-Compose loads backend settings and secrets from `back/.env` automatically.
-Copy `back/.env.example` first when setting up a new checkout.
+Compose loads the shared `.env` from the repository root. It supplies backend
+runtime settings and the frontend's `NEXT_PUBLIC_*` build settings.
 
 This brings up the frontend on `http://localhost:3000`, Postgres (with `pgvector`),
 Redis, the API on `http://localhost:8000`, the workers that process uploaded
@@ -40,11 +41,11 @@ canonical roles, including the default `student` role.
 ### Backend manually
 
 ```bash
+cp .env.example .env                                  # from the repository root
 cd back
 python -m venv .venv && . .venv/Scripts/activate      # Windows: .venv\Scripts\activate
 pip install uv
 uv pip install -r requirements-dev.txt
-cp .env.example .env                                  # then fill in the secrets
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
@@ -71,23 +72,23 @@ rq worker material_processing --url redis://localhost:6379/0
 ```bash
 cd front
 npm install
-cp .env.example .env.local
 npm run dev        # http://localhost:3000
 ```
 
-The Arabic UI is served from `/`, English from `/en`.
+The frontend loads the repository-root `.env`; no second frontend environment
+file is needed. The Arabic UI is served from `/`, English from `/en`.
 
 ---
 
 ## Configuration
 
-* `back/.env.example` — database, Redis, JWT, identity, and AI gateway
-  configuration. Set `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` for any
-  OpenAI-compatible Chat Completions endpoint. OpenRouter uses
-  `https://openrouter.ai/api/v1`; OmniRouter uses
-  `https://omnirouter.li/v1`.
-* `front/.env.example` — `NEXT_PUBLIC_API_URL` (backend origin) and
-  `NEXT_PUBLIC_SITE_URL` (canonical/OG origin).
+Copy the root `.env.example` to `.env`. It contains the database, Redis, JWT,
+identity, AI gateway, and frontend settings. Set `LLM_BASE_URL`, `LLM_API_KEY`,
+`LLM_MODEL`, and `LLM_MAX_TOKENS` for any OpenAI-compatible Chat Completions
+endpoint. The token limit defaults to `4096`, avoiding unexpectedly large and
+expensive completion allowances. OpenRouter uses `https://openrouter.ai/api/v1`; OmniRouter uses
+`https://omnirouter.li/v1`. Only variables prefixed with `NEXT_PUBLIC_` are
+exposed to browser code; never put secrets in those variables.
 
 Embeddings have independent `EMBEDDING_BASE_URL`, `EMBEDDING_API_KEY`, and
 `EMBEDDING_MODEL` settings. The configured endpoint must support the OpenAI

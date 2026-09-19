@@ -3,7 +3,7 @@ x-backend-build: &backend-build
   dockerfile: Dockerfile
 
 x-backend-env-files: &backend-env-files
-  - ./back/.env
+  - ./.env
 
 x-backend-environment: &backend-environment
   DATABASE_URL: postgresql+psycopg://postgres:Postgres123!@postgres:5432/bosla
