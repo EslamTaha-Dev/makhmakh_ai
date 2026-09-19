@@ -8,7 +8,7 @@ x-backend-environment: &backend-environment
   JWT_SECRET_KEY: change-this-in-local-env
   AI_GATEWAY_PROVIDER: ${AI_GATEWAY_PROVIDER:-gemini}
   EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
-  GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
 
 services:

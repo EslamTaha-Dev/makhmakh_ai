@@ -78,9 +78,8 @@ The Arabic UI is served from `/`, English from `/en`.
 ## Configuration
 
 * `back/.env.example` — database, Redis, JWT, identity, and AI gateway
-  configuration. Gemini keys can be supplied as `GEMINI_API_KEYS` (comma
-  separated) or through the individual `GEMINI_API_KEY_DEV` / `GEMINI_API_KEY_PROD_N`
-  variables used by the multi-project rotation.
+  configuration. Set one `GEMINI_API_KEY` or `OPENROUTER_API_KEY` for the
+  provider selected by `AI_GATEWAY_PROVIDER`.
 * `front/.env.example` — `NEXT_PUBLIC_API_URL` (backend origin) and
   `NEXT_PUBLIC_SITE_URL` (canonical/OG origin).
 

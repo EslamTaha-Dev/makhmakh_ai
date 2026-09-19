@@ -19,19 +19,15 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     run_jobs_inline: bool = False
 
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5:1.5b"
     embedding_provider: Literal["gemini", "sentence-transformers"] = "gemini"
     active_embedding_model: str = "intfloat/multilingual-e5-small"
 
     jwt_secret_key: str
 
-    gemini_api_keys: str = ""
+    gemini_api_key: str = ""
     openrouter_api_key: str = ""
     mock_ai: bool = False
     ai_gateway_provider: str = "gemini"
-    ai_gateway_cooldown_seconds: int = 60
-    ai_gateway_max_retries: int = 4
     jwt_algorithm: str = "HS256"
     jwt_private_key: str | None = None
     jwt_public_key: str | None = None
